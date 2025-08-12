@@ -1,6 +1,15 @@
 # TTlockClient
 
-**TODO: Add description**
+An Elixir client library for TTLock API integration, providing OAuth authentication, lock management, and passcode management functionality.
+
+## Features
+
+- OAuth2 authentication with TTLock API
+- Lock management operations (list locks, get lock details)
+- Passcode management (add, delete, change, list passcodes)
+- Support for different passcode types (permanent, period, single use)
+- Automatic token refresh handling
+- Comprehensive error handling and response parsing
 
 ## Installation
 
