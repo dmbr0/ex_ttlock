@@ -123,8 +123,8 @@ defmodule TTlockClient.PasscodeManagement do
       )
   """
   @spec add_passcode(add_passcode_config()) :: {:ok, add_passcode_response()} | {:error, term()}
-  def add_passcode(opts) do
-    client_id = Keyword.fetch!(opts, :client_id)
+  def add_passcode(opts \\ []) do
+    client_id = get_config_value(opts, :client_id)
     access_token = Keyword.fetch!(opts, :access_token)
     lock_id = Keyword.fetch!(opts, :lock_id)
     keyboard_pwd = Keyword.fetch!(opts, :keyboard_pwd)
@@ -170,8 +170,8 @@ defmodule TTlockClient.PasscodeManagement do
       )
   """
   @spec delete_passcode(delete_passcode_config()) :: {:ok, map()} | {:error, term()}
-  def delete_passcode(opts) do
-    client_id = Keyword.fetch!(opts, :client_id)
+  def delete_passcode(opts \\ []) do
+    client_id = get_config_value(opts, :client_id)
     access_token = Keyword.fetch!(opts, :access_token)
     lock_id = Keyword.fetch!(opts, :lock_id)
     keyboard_pwd_id = Keyword.fetch!(opts, :keyboard_pwd_id)
@@ -213,8 +213,8 @@ defmodule TTlockClient.PasscodeManagement do
       )
   """
   @spec change_passcode(change_passcode_config()) :: {:ok, map()} | {:error, term()}
-  def change_passcode(opts) do
-    client_id = Keyword.fetch!(opts, :client_id)
+  def change_passcode(opts \\ []) do
+    client_id = get_config_value(opts, :client_id)
     access_token = Keyword.fetch!(opts, :access_token)
     lock_id = Keyword.fetch!(opts, :lock_id)
     keyboard_pwd_id = Keyword.fetch!(opts, :keyboard_pwd_id)
@@ -276,8 +276,8 @@ defmodule TTlockClient.PasscodeManagement do
   """
   @spec list_passcodes(list_passcodes_config()) ::
           {:ok, list_passcodes_response()} | {:error, term()}
-  def list_passcodes(opts) do
-    client_id = Keyword.fetch!(opts, :client_id)
+  def list_passcodes(opts \\ []) do
+    client_id = get_config_value(opts, :client_id)
     access_token = Keyword.fetch!(opts, :access_token)
     lock_id = Keyword.fetch!(opts, :lock_id)
     page_no = Keyword.get(opts, :page_no, 1)
@@ -295,6 +295,17 @@ defmodule TTlockClient.PasscodeManagement do
   end
 
   # Private functions
+
+  defp get_config_value(opts, key) do
+    case Keyword.get(opts, key) do
+      nil -> 
+        case Application.get_env(:ex_ttlock, key) do
+          nil -> raise ArgumentError, "#{key} is required either as option or in config"
+          value -> value
+        end
+      value -> value
+    end
+  end
 
   defp make_post_request(endpoint, params) do
     url = @base_url <> endpoint

@@ -84,11 +84,11 @@ defmodule TTlockClient.OAuth do
       )
   """
   @spec get_access_token(oauth_config()) :: {:ok, token_response()} | {:error, term()}
-  def get_access_token(opts) do
-    client_id = Keyword.fetch!(opts, :client_id)
-    client_secret = Keyword.fetch!(opts, :client_secret)
-    username = Keyword.fetch!(opts, :username)
-    password = Keyword.fetch!(opts, :password)
+  def get_access_token(opts \\ []) do
+    client_id = get_config_value(opts, :client_id)
+    client_secret = get_config_value(opts, :client_secret)
+    username = get_config_value(opts, :username)
+    password = get_config_value(opts, :password)
 
     hashed_password = hash_password(password)
 
@@ -129,9 +129,9 @@ defmodule TTlockClient.OAuth do
       )
   """
   @spec refresh_token(refresh_config()) :: {:ok, refresh_response()} | {:error, term()}
-  def refresh_token(opts) do
-    client_id = Keyword.fetch!(opts, :client_id)
-    client_secret = Keyword.fetch!(opts, :client_secret)
+  def refresh_token(opts \\ []) do
+    client_id = get_config_value(opts, :client_id)
+    client_secret = get_config_value(opts, :client_secret)
     refresh_token = Keyword.fetch!(opts, :refresh_token)
 
     params = [
@@ -161,6 +161,17 @@ defmodule TTlockClient.OAuth do
   end
 
   # Private functions
+
+  defp get_config_value(opts, key) do
+    case Keyword.get(opts, key) do
+      nil -> 
+        case Application.get_env(:ex_ttlock, key) do
+          nil -> raise ArgumentError, "#{key} is required either as option or in config"
+          value -> value
+        end
+      value -> value
+    end
+  end
 
   defp make_token_request(params) do
     url = @base_url <> @token_endpoint

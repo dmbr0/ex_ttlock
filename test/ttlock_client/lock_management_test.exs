@@ -5,25 +5,17 @@ defmodule TTlockClient.LockManagementTest do
   alias TTlockClient.LockManagement
 
   describe "get_lock_list/1" do
-    test "validates required parameters" do
+    test "uses config values and defaults" do
+      # Should not raise with config values set, only missing access_token should fail
       assert_raise KeyError, fn ->
         LockManagement.get_lock_list([])
       end
-
+    end
+    
+    test "validates required access_token parameter" do
+      # client_id comes from config, but access_token is still required
       assert_raise KeyError, fn ->
         LockManagement.get_lock_list(client_id: "test")
-      end
-
-      assert_raise KeyError, fn ->
-        LockManagement.get_lock_list(client_id: "test", access_token: "token")
-      end
-
-      assert_raise KeyError, fn ->
-        LockManagement.get_lock_list(
-          client_id: "test",
-          access_token: "token",
-          page_no: 1
-        )
       end
     end
 

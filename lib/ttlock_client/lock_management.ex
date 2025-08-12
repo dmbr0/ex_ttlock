@@ -139,11 +139,11 @@ defmodule TTlockClient.LockManagement do
       )
   """
   @spec get_lock_list(lock_list_config()) :: {:ok, lock_list_response()} | {:error, term()}
-  def get_lock_list(opts) do
-    client_id = Keyword.fetch!(opts, :client_id)
+  def get_lock_list(opts \\ []) do
+    client_id = get_config_value(opts, :client_id)
     access_token = Keyword.fetch!(opts, :access_token)
-    page_no = Keyword.fetch!(opts, :page_no)
-    page_size = Keyword.fetch!(opts, :page_size)
+    page_no = Keyword.get(opts, :page_no, 1)
+    page_size = Keyword.get(opts, :page_size, 20)
     lock_alias = Keyword.get(opts, :lock_alias)
     group_id = Keyword.get(opts, :group_id)
 
@@ -208,8 +208,8 @@ defmodule TTlockClient.LockManagement do
       )
   """
   @spec get_lock_details(lock_detail_config()) :: {:ok, lock_detail_response()} | {:error, term()}
-  def get_lock_details(opts) do
-    client_id = Keyword.fetch!(opts, :client_id)
+  def get_lock_details(opts \\ []) do
+    client_id = get_config_value(opts, :client_id)
     access_token = Keyword.fetch!(opts, :access_token)
     lock_id = Keyword.fetch!(opts, :lock_id)
 
@@ -224,6 +224,17 @@ defmodule TTlockClient.LockManagement do
   end
 
   # Private functions
+
+  defp get_config_value(opts, key) do
+    case Keyword.get(opts, key) do
+      nil -> 
+        case Application.get_env(:ex_ttlock, key) do
+          nil -> raise ArgumentError, "#{key} is required either as option or in config"
+          value -> value
+        end
+      value -> value
+    end
+  end
 
   defp current_timestamp do
     System.system_time(:millisecond)

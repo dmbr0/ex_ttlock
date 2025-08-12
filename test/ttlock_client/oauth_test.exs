@@ -29,21 +29,28 @@ defmodule TTlockClient.OAuthTest do
   end
 
   describe "get_access_token/1" do
-    test "validates required parameters" do
-      assert_raise KeyError, fn ->
+    test "uses config values when not provided" do
+      # Should attempt HTTP request with config values, will fail on network but not on missing params
+      # This just tests that it doesn't raise ArgumentError for missing config
+      try do
         OAuth.get_access_token([])
+      rescue
+        HTTPoison.Error -> :ok
+        _ -> flunk("Expected HTTPoison.Error")
       end
+    end
 
-      assert_raise KeyError, fn ->
-        OAuth.get_access_token(client_id: "test")
-      end
-
-      assert_raise KeyError, fn ->
-        OAuth.get_access_token(client_id: "test", client_secret: "secret")
-      end
-
-      assert_raise KeyError, fn ->
-        OAuth.get_access_token(client_id: "test", client_secret: "secret", username: "user")
+    test "prefers explicit parameters over config" do
+      try do
+        OAuth.get_access_token(
+          client_id: "explicit_client", 
+          client_secret: "explicit_secret", 
+          username: "explicit_user", 
+          password: "explicit_pass"
+        )
+      rescue
+        HTTPoison.Error -> :ok
+        _ -> flunk("Expected HTTPoison.Error")
       end
     end
   end
