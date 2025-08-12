@@ -4,11 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is an Elixir project for TTlock integration (`ex_ttlock`). The project follows standard Elixir/Mix conventions and is structured as a basic library package intended for Hex publication.
+This is an Elixir project for TTlock integration (`ex_ttlock`). The project follows standard Elixir/Mix conventions and is structured as a library package intended for Hex publication.
 
 **Project Structure:**
 - `lib/t_tlock_client.ex` - Main module containing TTlockClient functionality
+- `lib/ttlock_client/oauth.ex` - OAuth2 authentication module for TTLock API
 - `test/t_tlock_client_test.exs` - Test suite for the main module
+- `test/ttlock_client/oauth_test.exs` - Test suite for OAuth module
 - `test/test_helper.exs` - ExUnit test configuration
 - `mix.exs` - Project configuration and dependencies
 - `.formatter.exs` - Code formatting configuration
@@ -52,8 +54,16 @@ mix deps
 
 ## Architecture Notes
 
-- Single module architecture with `TTlockClient` as the main interface
-- Currently contains minimal boilerplate code (hello world function)
+- Modular architecture with `TTlockClient` as the main interface
+- `TTlockClient.OAuth` module handles authentication and token management
+- Uses HTTPoison for HTTP requests and Jason for JSON parsing
 - Project is set up for Elixir 1.18+ and uses standard Mix project structure
-- No external dependencies defined yet - uses only Elixir standard library
 - Configured for eventual Hex package publication
+
+## OAuth Module
+
+The `TTlockClient.OAuth` module provides:
+- `get_access_token/1` - Obtain access token using Resource Owner Password Credentials
+- `refresh_token/1` - Refresh expired access tokens
+- `hash_password/1` - MD5 password hashing as required by TTLock API
+- Automatic JSON response parsing and error handling
