@@ -10,9 +10,11 @@ This is an Elixir project for TTlock integration (`ex_ttlock`). The project foll
 - `lib/t_tlock_client.ex` - Main module containing TTlockClient functionality
 - `lib/ttlock_client/oauth.ex` - OAuth2 authentication module for TTLock API
 - `lib/ttlock_client/lock_management.ex` - Lock management operations module
+- `lib/ttlock_client/passcode_management.ex` - Passcode management operations module
 - `test/t_tlock_client_test.exs` - Test suite for the main module
 - `test/ttlock_client/oauth_test.exs` - Test suite for OAuth module
 - `test/ttlock_client/lock_management_test.exs` - Test suite for Lock Management module
+- `test/ttlock_client/passcode_management_test.exs` - Test suite for Passcode Management module
 - `test/test_helper.exs` - ExUnit test configuration
 - `mix.exs` - Project configuration and dependencies
 - `.formatter.exs` - Code formatting configuration
@@ -59,6 +61,7 @@ mix deps
 - Modular architecture with `TTlockClient` as the main interface
 - `TTlockClient.OAuth` module handles authentication and token management
 - `TTlockClient.LockManagement` module handles lock operations and information retrieval
+- `TTlockClient.PasscodeManagement` module handles passcode operations for locks
 - Uses HTTPoison for HTTP requests and Jason for JSON parsing
 - Project is set up for Elixir 1.18+ and uses standard Mix project structure
 - Configured for eventual Hex package publication
@@ -78,3 +81,12 @@ The `TTlockClient.LockManagement` module provides:
 - `get_lock_details/1` - Get detailed information about a specific lock
 - Automatic timestamp generation and parameter validation
 - Support for pagination and optional filtering parameters
+
+## Passcode Management Module
+
+The `TTlockClient.PasscodeManagement` module provides:
+- `add_passcode/1` - Add custom passcodes (permanent, period, or single use)
+- `delete_passcode/1` - Delete existing passcodes
+- `change_passcode/1` - Change existing passcode values
+- `list_passcodes/1` - List all passcodes for a specific lock
+- Support for different passcode types and time-based restrictions
