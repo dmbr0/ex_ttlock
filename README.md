@@ -29,22 +29,44 @@ end
 Configure your TTLock application credentials:
 
 ```elixir
-# Configure with client credentials from TTLock developer portal
+# Option A: Direct configuration
 TTlockClient.configure("your_client_id", "your_client_secret")
 
-# Optional: specify different API region
-TTlockClient.configure("client_id", "client_secret", "https://usapi.ttlock.com")
+# Option B: Use environment variables (automatically loads from .env in dev/test)
+TTlockClient.configure(
+  System.get_env("TTLOCK_CLIENT_ID"), 
+  System.get_env("TTLOCK_CLIENT_SECRET")
+)
+
+# Option C: One-liner with .env file
+TTlockClient.start_with_env()  # Reads all vars from environment
 ```
 
-### 2. Authentication
+### 2. Environment Setup (Recommended)
 
-Authenticate using your TTLock mobile app credentials (**not** developer portal credentials):
+Create a `.env` file in your project root:
+
+```bash
+# .env
+TTLOCK_CLIENT_ID=your_actual_client_id
+TTLOCK_CLIENT_SECRET=your_actual_client_secret
+TTLOCK_USERNAME=your_ttlock_username
+TTLOCK_PASSWORD=your_ttlock_password
+```
+
+**Important**: Add `.env` to your `.gitignore`!
+
+### 3. Authentication
 
 ```elixir
-# Use your TTLock mobile app username and password
-TTlockClient.authenticate("+8618966498228", "your_app_password")
-# or
-TTlockClient.authenticate("your_email@example.com", "your_app_password")
+# With environment variables
+TTlockClient.authenticate(
+  System.get_env("TTLOCK_USERNAME"), 
+  System.get_env("TTLOCK_PASSWORD")
+)
+
+# Or use the all-in-one helper
+TTlockClient.start_with_env()  # Configure + authenticate in one call
 ```
 
 ### 3. Making API Calls
@@ -73,7 +95,17 @@ end
 ### All-in-One Setup
 
 ```elixir
-# Configure and authenticate in one call
+# Option 1: With .env file (recommended)
+case TTlockClient.start_with_env() do
+  :ok -> 
+    {:ok, token} = TTlockClient.get_valid_token()
+    # Ready to make API calls
+    
+  {:error, reason} ->
+    # Handle setup error
+end
+
+# Option 2: Direct configuration
 case TTlockClient.start("client_id", "client_secret", "username", "password") do
   :ok -> 
     {:ok, token} = TTlockClient.get_valid_token()
@@ -117,22 +149,42 @@ TTlockClient.reset()
 
 ## Configuration Options
 
+### Using .env Files (Recommended for Development)
+
+The library automatically loads `.env` files in development and test environments:
+
+```bash
+# .env (in your project root)
+TTLOCK_CLIENT_ID=your_client_id
+TTLOCK_CLIENT_SECRET=your_client_secret
+TTLOCK_USERNAME=your_username
+TTLOCK_PASSWORD=your_password
+```
+
+Then use the simple setup:
+
+```elixir
+# Reads all environment variables and sets up authentication
+TTlockClient.start_with_env()
+```
+
 ### Application Configuration
 
 ```elixir
 # config/config.exs
 config :ex_ttlock,
-  client_id: "your_client_id",
-  client_secret: "your_client_secret",
+  client_id: System.get_env("TTLOCK_CLIENT_ID"),
+  client_secret: System.get_env("TTLOCK_CLIENT_SECRET"),
   base_url: "https://euapi.ttlock.com"  # optional
 ```
 
-### Environment Variables
+### Environment Variables (Production)
 
 ```bash
 export TTLOCK_CLIENT_ID="your_client_id"
 export TTLOCK_CLIENT_SECRET="your_client_secret"
-export TTLOCK_BASE_URL="https://euapi.ttlock.com"  # optional
+export TTLOCK_USERNAME="your_username"
+export TTLOCK_PASSWORD="your_password"
 ```
 
 ## API Reference
@@ -148,6 +200,7 @@ export TTLOCK_BASE_URL="https://euapi.ttlock.com"  # optional
 - `ready?/0` - Check if ready for API calls
 - `reset/0` - Clear all authentication state
 - `start/4,5` - Configure and authenticate in one call
+- `start_with_env/0` - Configure and authenticate using environment variables
 
 ### Authentication States
 
@@ -230,7 +283,6 @@ mix test.watch
 2. Create your feature branch (`git checkout -b feature/amazing-feature`)
 3. Follow the style guides:
    - [Elixir Style Guide](https://github.com/christopheradams/elixir_style_guide)
-   - [Erlang Guidelines](https://github.com/inaka/erlang_guidelines)
 4. Add tests for your changes
 5. Ensure all tests pass (`mix test`)
 6. Run code analysis (`mix credo`)

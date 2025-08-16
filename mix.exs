@@ -4,7 +4,7 @@ defmodule TTlockClient.MixProject do
   def project do
     [
       app: :ex_ttlock,
-      version: "0.1.2",
+      version: "0.1.0",
       elixir: "~> 1.18",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
@@ -39,6 +39,9 @@ defmodule TTlockClient.MixProject do
 
       # JSON handling
       {:jason, "~> 1.4"},
+
+      # Environment variables from .env file
+      {:dotenv, "~> 3.1", only: [:dev, :test]},
 
       # Development and testing
       {:ex_doc, "~> 0.30", only: :dev, runtime: false},

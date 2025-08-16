@@ -5,6 +5,11 @@ defmodule TTlockClient.Application do
 
   @impl true
   def start(_type, _args) do
+    # Load .env file in development and test environments
+    if Mix.env() in [:dev, :test] do
+      Dotenv.load()
+    end
+
     children = [
       # Start Finch HTTP client
       {Finch, name: TTlockClient.Finch},

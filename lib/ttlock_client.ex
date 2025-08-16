@@ -247,4 +247,35 @@ defmodule TTlockClient do
   def ready? do
     status() == :authenticated
   end
+
+  @doc """
+  Convenience function to start with environment variables.
+
+  Reads TTLOCK_CLIENT_ID, TTLOCK_CLIENT_SECRET, TTLOCK_USERNAME,
+  and TTLOCK_PASSWORD from environment variables and configures/authenticates.
+
+  ## Examples
+      # Ensure your .env file has the required variables
+      TTlockClient.start_with_env()
+
+  ## Returns
+    * `:ok` - Configuration and authentication successful
+    * `{:error, :missing_env_vars}` - Required environment variables not set
+    * `{:error, reason}` - Setup failed
+  """
+  @spec start_with_env() :: :ok | {:error, term()}
+  def start_with_env do
+    client_id = System.get_env("TTLOCK_CLIENT_ID")
+    client_secret = System.get_env("TTLOCK_CLIENT_SECRET")
+    username = System.get_env("TTLOCK_USERNAME")
+    password = System.get_env("TTLOCK_PASSWORD")
+
+    case {client_id, client_secret, username, password} do
+      {nil, _, _, _} -> {:error, {:missing_env_var, "TTLOCK_CLIENT_ID"}}
+      {_, nil, _, _} -> {:error, {:missing_env_var, "TTLOCK_CLIENT_SECRET"}}
+      {_, _, nil, _} -> {:error, {:missing_env_var, "TTLOCK_USERNAME"}}
+      {_, _, _, nil} -> {:error, {:missing_env_var, "TTLOCK_PASSWORD"}}
+      {cid, cs, u, p} -> start(cid, cs, u, p)
+    end
+  end
 end
