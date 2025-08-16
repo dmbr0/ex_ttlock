@@ -189,7 +189,7 @@ export TTLOCK_PASSWORD="your_password"
 
 ## API Reference
 
-### TTlockClient
+### Authentication
 
 - `configure/2,3` - Set client credentials
 - `authenticate/2` - Authenticate with username/password
@@ -201,6 +201,18 @@ export TTLOCK_PASSWORD="your_password"
 - `reset/0` - Clear all authentication state
 - `start/4,5` - Configure and authenticate in one call
 - `start_with_env/0` - Configure and authenticate using environment variables
+
+### Lock Management
+
+- `get_locks/0,1,2,3,4` - Get paginated list of locks
+- `get_lock/1` - Get detailed information about a specific lock
+- `get_all_locks/0,1,2` - Get all locks (handles pagination automatically)
+
+### Low-Level API
+
+- `TTlockClient.Locks.get_lock_list/1` - Direct lock list API call
+- `TTlockClient.Locks.get_lock_detail/1` - Direct lock detail API call
+- `TTlockClient.Types.*` - Type definitions and helper functions
 
 ### Authentication States
 
@@ -277,12 +289,34 @@ mix test test/ttlock_client_test.exs
 mix test.watch
 ```
 
+## Examples
+
+The library includes several example scripts:
+
+```bash
+# Basic authentication example
+elixir example.exs
+
+# Simple setup with .env
+elixir example.exs simple
+
+# Real-time token monitoring
+elixir example.exs monitor
+
+# Lock management examples
+elixir locks_example.exs
+
+# Advanced lock operations
+elixir locks_example.exs detail
+```
+
 ## Contributing
 
 1. Fork the repository
 2. Create your feature branch (`git checkout -b feature/amazing-feature`)
 3. Follow the style guides:
    - [Elixir Style Guide](https://github.com/christopheradams/elixir_style_guide)
+   - [Erlang Guidelines](https://github.com/inaka/erlang_guidelines)
 4. Add tests for your changes
 5. Ensure all tests pass (`mix test`)
 6. Run code analysis (`mix credo`)

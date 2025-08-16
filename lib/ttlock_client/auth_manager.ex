@@ -107,6 +107,14 @@ defmodule TTlockClient.AuthManager do
   end
 
   @doc """
+  Gets the current client configuration.
+  """
+  @spec get_config() :: {:ok, TTlockClient.Types.client_config()} | {:error, :not_configured}
+  def get_config do
+    GenServer.call(__MODULE__, :get_config)
+  end
+
+  @doc """
   Clears all authentication data.
   """
   @spec reset() :: :ok
@@ -226,6 +234,14 @@ defmodule TTlockClient.AuthManager do
     if timer, do: Process.cancel_timer(timer)
     Logger.info("Resetting TTlockClient authentication state")
     {:reply, :ok, %State{}}
+  end
+
+  @impl true
+  def handle_call(:get_config, _from, %State{config: config} = state) do
+    case config do
+      nil -> {:reply, {:error, :not_configured}, state}
+      config -> {:reply, {:ok, config}, state}
+    end
   end
 
   @impl true

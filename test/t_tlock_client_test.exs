@@ -65,6 +65,60 @@ defmodule TTlockClientTest do
       TTlockClient.reset()
       assert TTlockClient.status() == :not_configured
     end
+  describe "get_locks/0" do
+    test "returns error when not authenticated" do
+      assert {:error, :not_authenticated} = TTlockClient.get_locks()
+    end
+  end
+
+  describe "get_lock/1" do
+    test "returns error when not authenticated" do
+      assert {:error, :not_authenticated} = TTlockClient.get_lock(12345)
+    end
+  end
+
+  describe "get_all_locks/0" do
+    test "returns error when not authenticated" do
+      assert {:error, :not_authenticated} = TTlockClient.get_all_locks()
+    end
+  end
+end
+
+defmodule TTlockClient.LocksTest do
+  use ExUnit.Case
+  alias TTlockClient.Locks
+  import TTlockClient.Types
+
+  setup do
+    # Reset state before each test
+    TTlockClient.reset()
+    :ok
+  end
+
+  describe "get_lock_list/1" do
+    test "returns error when not authenticated" do
+      params = new_lock_list_params()
+      assert {:error, :not_authenticated} = Locks.get_lock_list(params)
+    end
+  end
+
+  describe "get_lock_detail/1" do
+    test "returns error when not authenticated" do
+      params = new_lock_detail_params(12345)
+      assert {:error, :not_authenticated} = Locks.get_lock_detail(params)
+    end
+  end
+
+  describe "get_lock/1" do
+    test "returns error when not authenticated" do
+      assert {:error, :not_authenticated} = Locks.get_lock(12345)
+    end
+  end
+
+  describe "get_all_locks/3" do
+    test "returns error when not authenticated" do
+      assert {:error, :not_authenticated} = Locks.get_all_locks()
+    end
   end
 end
 
@@ -252,4 +306,5 @@ defmodule TTlockClient.OAuthClientTest do
       assert oauth_response.access_token == "new_access_token"
     end
   end
+end
 end

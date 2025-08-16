@@ -26,6 +26,19 @@ defmodule TTlockClient.Types do
     password_hash: nil
   )
 
+  # Lock list request parameters record
+  Record.defrecord(:lock_list_params,
+    page_no: 1,
+    page_size: 20,
+    lock_alias: nil,
+    group_id: nil
+  )
+
+  # Lock detail request parameters record
+  Record.defrecord(:lock_detail_params,
+    lock_id: nil
+  )
+
   @type client_config :: record(:client_config,
           client_id: String.t(),
           client_secret: String.t(),
@@ -44,6 +57,17 @@ defmodule TTlockClient.Types do
           password_hash: String.t()
         )
 
+  @type lock_list_params :: record(:lock_list_params,
+          page_no: integer(),
+          page_size: integer(),
+          lock_alias: String.t() | nil,
+          group_id: integer() | nil
+        )
+
+  @type lock_detail_params :: record(:lock_detail_params,
+          lock_id: integer()
+        )
+
   @type oauth_response :: %{
           access_token: String.t(),
           refresh_token: String.t(),
@@ -57,6 +81,54 @@ defmodule TTlockClient.Types do
         }
 
   @type auth_result :: {:ok, oauth_response()} | {:error, oauth_error() | atom()}
+
+  # Lock API response types
+  @type lock_record :: %{
+          lockId: integer(),
+          lockName: String.t(),
+          lockAlias: String.t(),
+          lockMac: String.t(),
+          electricQuantity: integer(),
+          featureValue: String.t(),
+          hasGateway: integer(),
+          lockData: String.t(),
+          groupId: integer(),
+          groupName: String.t(),
+          date: integer()
+        }
+
+  @type lock_list_response :: %{
+          list: [lock_record()],
+          pageNo: integer(),
+          pageSize: integer(),
+          pages: integer(),
+          total: integer()
+        }
+
+  @type lock_detail_response :: %{
+          lockId: integer(),
+          lockName: String.t(),
+          lockAlias: String.t(),
+          lockMac: String.t(),
+          noKeyPwd: String.t(),
+          electricQuantity: integer(),
+          featureValue: String.t(),
+          timezoneRawOffset: integer(),
+          modelNum: String.t(),
+          hardwareRevision: String.t(),
+          firmwareRevision: String.t(),
+          autoLockTime: integer(),
+          lockSound: integer(),
+          privacyLock: integer(),
+          tamperAlert: integer(),
+          resetButton: integer(),
+          openDirection: integer(),
+          passageMode: integer(),
+          passageModeAutoUnlock: integer(),
+          date: integer()
+        }
+
+  @type lock_api_result :: {:ok, lock_list_response() | lock_detail_response()} | {:error, oauth_error() | atom()}
 
   # Error codes
   @expired_token_error 10004
@@ -106,6 +178,27 @@ defmodule TTlockClient.Types do
       username: username,
       password_hash: password_hash
     )
+  end
+
+  @doc """
+  Creates lock list request parameters.
+  """
+  @spec new_lock_list_params(integer(), integer(), String.t() | nil, integer() | nil) :: lock_list_params()
+  def new_lock_list_params(page_no \\ 1, page_size \\ 20, lock_alias \\ nil, group_id \\ nil) do
+    lock_list_params(
+      page_no: page_no,
+      page_size: page_size,
+      lock_alias: lock_alias,
+      group_id: group_id
+    )
+  end
+
+  @doc """
+  Creates lock detail request parameters.
+  """
+  @spec new_lock_detail_params(integer()) :: lock_detail_params()
+  def new_lock_detail_params(lock_id) do
+    lock_detail_params(lock_id: lock_id)
   end
 
   @doc """

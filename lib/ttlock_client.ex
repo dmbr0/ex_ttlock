@@ -44,6 +44,7 @@ defmodule TTlockClient do
   """
 
   alias TTlockClient.AuthManager
+  alias TTlockClient.Locks
 
   @doc """
   Configures the TTLock client with your application credentials.
@@ -277,5 +278,75 @@ defmodule TTlockClient do
       {_, _, _, nil} -> {:error, {:missing_env_var, "TTLOCK_PASSWORD"}}
       {cid, cs, u, p} -> start(cid, cs, u, p)
     end
+  end
+
+  # Lock Management Functions
+
+  @doc """
+  Gets the list of locks for the authenticated user.
+
+  ## Parameters
+    * `page_no` - Page number (default 1)
+    * `page_size` - Items per page (default 20, max 1000)
+    * `lock_alias` - Optional filter by lock alias
+    * `group_id` - Optional filter by group ID
+
+  ## Examples
+      # Get first page with defaults
+      {:ok, locks} = TTlockClient.get_locks()
+
+      # Get specific page
+      {:ok, locks} = TTlockClient.get_locks(2, 50)
+
+      # Filter by lock alias
+      {:ok, locks} = TTlockClient.get_locks(1, 20, "Front Door")
+
+  ## Returns
+    * `{:ok, response}` - Contains list, pagination info
+    * `{:error, reason}` - Request failed
+  """
+  @spec get_locks(integer(), integer(), String.t() | nil, integer() | nil) ::
+    {:ok, map()} | {:error, term()}
+  def get_locks(page_no \\ 1, page_size \\ 20, lock_alias \\ nil, group_id \\ nil) do
+    params = TTlockClient.Types.new_lock_list_params(page_no, page_size, lock_alias, group_id)
+    Locks.get_lock_list(params)
+  end
+
+  @doc """
+  Gets detailed information about a specific lock.
+
+  ## Parameters
+    * `lock_id` - The ID of the lock to retrieve
+
+  ## Examples
+      {:ok, lock_detail} = TTlockClient.get_lock(12345)
+
+  ## Returns
+    * `{:ok, lock_detail}` - Detailed lock information
+    * `{:error, reason}` - Request failed or lock not found
+  """
+  @spec get_lock(integer()) :: {:ok, map()} | {:error, term()}
+  def get_lock(lock_id) when is_integer(lock_id) do
+    Locks.get_lock(lock_id)
+  end
+
+  @doc """
+  Gets all locks for the authenticated user (handles pagination automatically).
+
+  ## Parameters
+    * `lock_alias` - Optional filter by lock alias
+    * `group_id` - Optional filter by group ID
+
+  ## Examples
+      {:ok, all_locks} = TTlockClient.get_all_locks()
+      {:ok, filtered_locks} = TTlockClient.get_all_locks("Front Door")
+
+  ## Returns
+    * `{:ok, [lock_records]}` - List of all locks
+    * `{:error, reason}` - Request failed
+  """
+  @spec get_all_locks(String.t() | nil, integer() | nil) :: {:ok, [map()]} | {:error, term()}
+  def get_all_locks(lock_alias \\ nil, group_id \\ nil) do
+    Locks.get_all_locks(100, lock_alias, group_id)
   end
 end
