@@ -430,4 +430,75 @@ defmodule TTlockClient do
     params = TTlockClient.Types.new_passcode_add_params(lock_id, passcode, name, passcode_type, start_date, end_date, add_type)
     Passcodes.add_passcode(params)
   end
+
+  @doc """
+  Gets all passcodes for a lock.
+
+  ## Parameters
+    * `lock_id` - The lock ID to get passcodes for
+    * `search_str` - Optional search keyword (fuzzy search by name or exact match by passcode)
+    * `page_no` - Page number (default 1)
+    * `page_size` - Items per page (default 20, max 200)
+    * `order_by` - Sorting: 0 = by name, 1 = reverse by time, 2 = reverse by name (default 1)
+
+  ## Examples
+      # Get all passcodes for a lock
+      {:ok, %{list: passcodes, total: count}} = TTlockClient.get_passcodes(12345)
+
+      # Search for specific passcodes
+      {:ok, response} = TTlockClient.get_passcodes(12345, "Guest")
+
+      # Get specific page
+      {:ok, response} = TTlockClient.get_passcodes(12345, nil, 2, 50, 1)
+
+  ## Returns
+    * `{:ok, response}` - Contains list, pagination info
+    * `{:error, reason}` - Request failed
+  """
+  @spec get_passcodes(integer(), String.t() | nil, integer(), integer(), integer()) ::
+    {:ok, map()} | {:error, term()}
+  def get_passcodes(lock_id, search_str \\ nil, page_no \\ 1, page_size \\ 20, order_by \\ 1) do
+    params = TTlockClient.Types.new_passcode_list_params(lock_id, search_str, page_no, page_size, order_by)
+    Passcodes.get_passcode_list(params)
+  end
+
+  @doc """
+  Gets all passcodes for a lock (convenience function).
+
+  ## Parameters
+    * `lock_id` - The lock ID to get passcodes for
+    * `search_str` - Optional search string
+
+  ## Examples
+      {:ok, %{list: passcodes}} = TTlockClient.get_lock_passcodes(12345)
+      {:ok, results} = TTlockClient.get_lock_passcodes(12345, "Guest")
+
+  ## Returns
+    * `{:ok, response}` - Contains list of passcodes
+    * `{:error, reason}` - Request failed
+  """
+  @spec get_lock_passcodes(integer(), String.t() | nil) :: {:ok, map()} | {:error, term()}
+  def get_lock_passcodes(lock_id, search_str \\ nil) do
+    Passcodes.get_lock_passcodes(lock_id, search_str)
+  end
+
+  @doc """
+  Searches passcodes by name or passcode value.
+
+  ## Parameters
+    * `lock_id` - The lock ID to search in
+    * `search_term` - Search term (name or exact passcode match)
+
+  ## Examples
+      {:ok, results} = TTlockClient.search_passcodes(12345, "Guest")
+      {:ok, results} = TTlockClient.search_passcodes(12345, "123456")
+
+  ## Returns
+    * `{:ok, response}` - Contains matching passcodes
+    * `{:error, reason}` - Request failed
+  """
+  @spec search_passcodes(integer(), String.t()) :: {:ok, map()} | {:error, term()}
+  def search_passcodes(lock_id, search_term) do
+    Passcodes.search_passcodes(lock_id, search_term)
+  end
 end

@@ -50,6 +50,15 @@ defmodule TTlockClient.Types do
     add_type: 1
   )
 
+  # Passcode list request parameters record
+  Record.defrecord(:passcode_list_params,
+    lock_id: nil,
+    search_str: nil,
+    page_no: 1,
+    page_size: 20,
+    order_by: 1
+  )
+
   @type client_config :: record(:client_config,
           client_id: String.t(),
           client_secret: String.t(),
@@ -87,6 +96,14 @@ defmodule TTlockClient.Types do
           start_date: integer() | nil,
           end_date: integer() | nil,
           add_type: integer()
+        )
+
+  @type passcode_list_params :: record(:passcode_list_params,
+          lock_id: integer(),
+          search_str: String.t() | nil,
+          page_no: integer(),
+          page_size: integer(),
+          order_by: integer()
         )
 
   @type oauth_response :: %{
@@ -156,7 +173,28 @@ defmodule TTlockClient.Types do
           keyboardPwdId: integer()
         }
 
-  @type passcode_api_result :: {:ok, passcode_add_response()} | {:error, oauth_error() | atom()}
+  @type passcode_record :: %{
+          keyboardPwdId: integer(),
+          lockId: integer(),
+          keyboardPwd: String.t(),
+          keyboardPwdName: String.t(),
+          keyboardPwdType: String.t(),
+          startDate: integer(),
+          endDate: integer(),
+          sendDate: integer(),
+          isCustom: integer(),
+          senderUsername: String.t()
+        }
+
+  @type passcode_list_response :: %{
+          list: [passcode_record()],
+          pageNo: integer(),
+          pageSize: integer(),
+          pages: integer(),
+          total: integer()
+        }
+
+  @type passcode_api_result :: {:ok, passcode_add_response() | passcode_list_response()} | {:error, oauth_error() | atom()}
 
   # Error codes
   @expired_token_error 10004
@@ -251,6 +289,27 @@ defmodule TTlockClient.Types do
       start_date: start_date,
       end_date: end_date,
       add_type: add_type
+    )
+  end
+
+  @doc """
+  Creates passcode list request parameters.
+
+  ## Parameters
+    * `lock_id` - The lock ID to get passcodes for
+    * `search_str` - Optional search keyword (fuzzy search by name or exact match by passcode)
+    * `page_no` - Page number (default 1)
+    * `page_size` - Items per page (default 20, max 200)
+    * `order_by` - Sorting: 0 = by name, 1 = reverse by time, 2 = reverse by name (default 1)
+  """
+  @spec new_passcode_list_params(integer(), String.t() | nil, integer(), integer(), integer()) :: passcode_list_params()
+  def new_passcode_list_params(lock_id, search_str \\ nil, page_no \\ 1, page_size \\ 20, order_by \\ 1) do
+    passcode_list_params(
+      lock_id: lock_id,
+      search_str: search_str,
+      page_no: page_no,
+      page_size: page_size,
+      order_by: order_by
     )
   end
 

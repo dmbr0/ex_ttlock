@@ -213,12 +213,16 @@ export TTLOCK_PASSWORD="your_password"
 - `add_permanent_passcode/2,3` - Add a permanent passcode via gateway
 - `add_temporary_passcode/4,5` - Add a time-limited passcode via gateway
 - `add_passcode/2,3,4,5,6,7,8` - Add passcode with full parameter control
+- `get_passcodes/1,2,3,4,5` - Get paginated list of passcodes for a lock
+- `get_lock_passcodes/1,2` - Get all passcodes for a lock (convenience function)
+- `search_passcodes/2` - Search passcodes by name or passcode value
 
 ### Low-Level API
 
 - `TTlockClient.Locks.get_lock_list/1` - Direct lock list API call
 - `TTlockClient.Locks.get_lock_detail/1` - Direct lock detail API call
 - `TTlockClient.Passcodes.add_passcode/1` - Direct passcode add API call
+- `TTlockClient.Passcodes.get_passcode_list/1` - Direct passcode list API call
 - `TTlockClient.Types.*` - Type definitions and helper functions
 
 ### Authentication States

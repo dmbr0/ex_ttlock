@@ -48,6 +48,10 @@ defmodule PasscodesExample do
         add_temporary_passcode_example(lock_id)
         add_custom_passcode_example(lock_id)
 
+        # Demonstrate listing and searching passcodes
+        list_passcodes_example(lock_id)
+        search_passcodes_example(lock_id)
+
       {:error, reason} ->
         Logger.error("✗ Could not get a lock to work with: #{inspect(reason)}")
         Logger.info("Make sure you have at least one lock in your account")
@@ -147,6 +151,63 @@ defmodule PasscodesExample do
         Logger.error("✗ Failed to add custom passcode: #{inspect(reason)}")
     end
   end
+
+  defp list_passcodes_example(lock_id) do
+    Logger.info("Listing all passcodes for the lock...")
+
+    case TTlockClient.get_lock_passcodes(lock_id) do
+      {:ok, %{list: passcodes, total: total}} ->
+        Logger.info("✓ Found #{total} passcodes for this lock")
+
+        if total > 0 do
+          Logger.info("Passcode details:")
+
+          Enum.each(passcodes, fn passcode ->
+            name = passcode["keyboardPwdName"] || "Unnamed"
+            pwd = passcode["keyboardPwd"]
+            type_str = case passcode["keyboardPwdType"] do
+              "2" -> "Permanent"
+              "3" -> "Temporary"
+              _ -> "Unknown"
+            end
+            is_custom = if passcode["isCustom"] == 1, do: "Custom", else: "Random"
+
+            Logger.info("  - #{name} (#{pwd})")
+            Logger.info("    Type: #{type_str}, Method: #{is_custom}")
+            Logger.info("    ID: #{passcode["keyboardPwdId"]}")
+
+            if passcode["keyboardPwdType"] == "3" do
+              start_date = DateTime.from_unix!(passcode["startDate"], :millisecond)
+              end_date = DateTime.from_unix!(passcode["endDate"], :millisecond)
+              Logger.info("    Valid: #{DateTime.to_string(start_date)} to #{DateTime.to_string(end_date)}")
+            end
+          end)
+        else
+          Logger.info("No passcodes found for this lock")
+        end
+
+      {:error, reason} ->
+        Logger.error("✗ Failed to list passcodes: #{inspect(reason)}")
+    end
+  end
+
+  defp search_passcodes_example(lock_id) do
+    Logger.info("Searching for passcodes containing 'Guest'...")
+
+    case TTlockClient.search_passcodes(lock_id, "Guest") do
+      {:ok, %{list: results, total: total}} ->
+        Logger.info("✓ Found #{total} passcode(s) matching 'Guest'")
+
+        Enum.each(results, fn passcode ->
+          name = passcode["keyboardPwdName"]
+          pwd = passcode["keyboardPwd"]
+          Logger.info("  - #{name}: #{pwd}")
+        end)
+
+      {:error, reason} ->
+        Logger.error("✗ Failed to search passcodes: #{inspect(reason)}")
+    end
+  end
 end
 
 defmodule AdvancedPasscodesExample do
@@ -176,8 +237,10 @@ defmodule AdvancedPasscodesExample do
 
         show_passcode_types()
         show_add_types()
+        show_order_by_options()
         demonstrate_validation()
         demonstrate_using_types_module(lock_id)
+        demonstrate_advanced_listing(lock_id)
 
       {:error, reason} ->
         Logger.error("Could not get lock: #{inspect(reason)}")
@@ -205,6 +268,14 @@ defmodule AdvancedPasscodesExample do
     types = TTlockClient.Passcodes.add_types()
     Logger.info("  Bluetooth: #{types.bluetooth} (use mobile app first, then sync)")
     Logger.info("  Gateway: #{types.gateway} (direct via gateway or WiFi lock)")
+  end
+
+  defp show_order_by_options do
+    Logger.info("Available sorting options:")
+    options = TTlockClient.Passcodes.order_by_options()
+    Logger.info("  By name: #{options.name}")
+    Logger.info("  By time (newest first): #{options.time_desc}")
+    Logger.info("  By name (reverse): #{options.name_desc}")
   end
 
   defp demonstrate_validation do
@@ -258,6 +329,43 @@ defmodule AdvancedPasscodesExample do
         Logger.info("✓ Advanced passcode added: #{inspect(result)}")
       {:error, reason} ->
         Logger.info("Could not add passcode (expected): #{inspect(reason)}")
+    end
+  end
+
+  defp demonstrate_advanced_listing(lock_id) do
+    Logger.info("Demonstrating advanced passcode listing...")
+
+    # Using the Types module for advanced parameter control
+    params = TTlockClient.Types.new_passcode_list_params(
+      lock_id,
+      nil,  # no search filter
+      1,    # first page
+      10,   # 10 items per page
+      1     # sort by time descending
+    )
+
+    case TTlockClient.Passcodes.get_passcode_list(params) do
+      {:ok, %{list: passcodes, total: total, pages: pages}} ->
+        Logger.info("✓ Advanced listing successful:")
+        Logger.info("  Total passcodes: #{total}")
+        Logger.info("  Total pages: #{pages}")
+        Logger.info("  Passcodes on this page: #{length(passcodes)}")
+
+        # Show pagination example
+        if pages > 1 do
+          Logger.info("Getting page 2...")
+          page2_params = TTlockClient.Types.new_passcode_list_params(lock_id, nil, 2, 10, 1)
+
+          case TTlockClient.Passcodes.get_passcode_list(page2_params) do
+            {:ok, %{list: page2_passcodes}} ->
+              Logger.info("✓ Page 2 retrieved: #{length(page2_passcodes)} passcodes")
+            {:error, reason} ->
+              Logger.info("Page 2 error: #{inspect(reason)}")
+          end
+        end
+
+      {:error, reason} ->
+        Logger.info("Advanced listing error: #{inspect(reason)}")
     end
   end
 end

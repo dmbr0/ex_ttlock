@@ -1,25 +1,25 @@
 defmodule TTlockClient.Passcodes do
   @moduledoc """
   TTLock Passcodes API client.
-  
+
   Provides functions to interact with TTLock's passcode management endpoints.
   Handles adding, managing, and deleting custom passcodes for locks.
-  
+
   All functions automatically retrieve valid access tokens and client configuration
   from the TTlockClient.AuthManager, so authentication must be set up first.
-  
+
   ## Passcode Types
-  
+
   - **Permanent (type 2)**: Passcode never expires
   - **Period (type 3)**: Passcode valid only between start and end dates
-  
+
   ## Add Methods
-  
+
   - **Bluetooth (addType 1)**: Use mobile app/SDK first, then sync to cloud
   - **Gateway/WiFi (addType 2)**: Add directly via gateway or WiFi lock
-  
+
   ## Examples
-  
+
       # Add a permanent passcode via gateway
       params = TTlockClient.Types.new_passcode_add_params(
         12345,     # lock_id
@@ -27,15 +27,15 @@ defmodule TTlockClient.Passcodes do
         "Guest",   # name
         2,         # permanent type
         nil,       # no start date for permanent
-        nil,       # no end date for permanent  
+        nil,       # no end date for permanent
         2          # via gateway
       )
       {:ok, result} = TTlockClient.Passcodes.add_passcode(params)
-      
+
       # Add a temporary passcode (valid for 1 week)
       start_time = DateTime.utc_now() |> DateTime.to_unix(:millisecond)
       end_time = DateTime.add(DateTime.utc_now(), 7, :day) |> DateTime.to_unix(:millisecond)
-      
+
       params = TTlockClient.Types.new_passcode_add_params(
         12345,     # lock_id
         987654,    # passcode
@@ -55,43 +55,50 @@ defmodule TTlockClient.Passcodes do
 
   @type passcode_api_result :: TTlockClient.Types.passcode_api_result()
   @type passcode_add_params :: TTlockClient.Types.passcode_add_params()
+  @type passcode_list_params :: TTlockClient.Types.passcode_list_params()
 
   @passcode_add_endpoint "/v3/keyboardPwd/add"
+  @passcode_list_endpoint "/v3/lock/listKeyboardPwd"
   @request_timeout 30_000
 
   # Passcode type constants
   @passcode_type_permanent 2
   @passcode_type_period 3
 
-  # Add type constants  
+  # Add type constants
   @add_type_bluetooth 1
   @add_type_gateway 2
 
+  # Order by constants
+  @order_by_name 0
+  @order_by_time_desc 1
+  @order_by_name_desc 2
+
   @doc """
   Adds a custom passcode to a lock.
-  
+
   Supports both permanent and temporary passcodes. For temporary passcodes,
   start_date and end_date must be provided. Maximum 250 passcodes per lock.
-  
+
   ## Parameters
     * `params` - Passcode add parameters containing all required information
-  
+
   ## Examples
       # Permanent passcode via gateway
       params = TTlockClient.Types.new_passcode_add_params(
         lock_id, 123456, "Guest Access", 2, nil, nil, 2
       )
       {:ok, %{keyboardPwdId: passcode_id}} = TTlockClient.Passcodes.add_passcode(params)
-      
+
       # Temporary passcode (1 week)
       start_ms = DateTime.utc_now() |> DateTime.to_unix(:millisecond)
       end_ms = DateTime.add(DateTime.utc_now(), 7, :day) |> DateTime.to_unix(:millisecond)
-      
+
       params = TTlockClient.Types.new_passcode_add_params(
         lock_id, 555999, "Week Access", 3, start_ms, end_ms, 2
       )
       {:ok, result} = TTlockClient.Passcodes.add_passcode(params)
-      
+
   ## Returns
     * `{:ok, passcode_add_response}` - Success with passcode ID
     * `{:error, :not_authenticated}` - Authentication required
@@ -102,9 +109,9 @@ defmodule TTlockClient.Passcodes do
   def add_passcode(passcode_add_params() = params) do
     lock_id = passcode_add_params(params, :lock_id)
     keyboard_pwd = passcode_add_params(params, :keyboard_pwd)
-    
+
     Logger.debug("Adding passcode #{keyboard_pwd} to lock ID: #{lock_id}")
-    
+
     with :ok <- validate_passcode_params(params),
          {:ok, auth_data} <- get_auth_data(),
          {:ok, form_params} <- build_passcode_add_params(params, auth_data),
@@ -116,12 +123,12 @@ defmodule TTlockClient.Passcodes do
 
   @doc """
   Convenience function to add a permanent passcode via gateway.
-  
+
   ## Parameters
     * `lock_id` - The lock ID to add the passcode to
     * `passcode` - The 4-9 digit passcode
     * `name` - Optional name for the passcode
-    
+
   ## Example
       {:ok, result} = TTlockClient.Passcodes.add_permanent_passcode(12345, 123456, "Guest")
   """
@@ -133,14 +140,14 @@ defmodule TTlockClient.Passcodes do
 
   @doc """
   Convenience function to add a temporary passcode via gateway.
-  
+
   ## Parameters
     * `lock_id` - The lock ID to add the passcode to
     * `passcode` - The 4-9 digit passcode
     * `start_date` - Start time (DateTime or milliseconds)
     * `end_date` - End time (DateTime or milliseconds)
     * `name` - Optional name for the passcode
-    
+
   ## Example
       start_time = DateTime.utc_now()
       end_time = DateTime.add(start_time, 7, :day)
@@ -152,9 +159,80 @@ defmodule TTlockClient.Passcodes do
   def add_temporary_passcode(lock_id, passcode, start_date, end_date, name \\ nil) do
     start_ms = datetime_to_milliseconds(start_date)
     end_ms = datetime_to_milliseconds(end_date)
-    
+
     params = new_passcode_add_params(lock_id, passcode, name, @passcode_type_period, start_ms, end_ms, @add_type_gateway)
     add_passcode(params)
+  end
+
+  @doc """
+  Retrieves all passcodes created for a lock.
+
+  Returns both random and custom passcodes with pagination support.
+
+  ## Parameters
+    * `params` - Passcode list parameters containing lock ID and optional filters
+
+  ## Examples
+      # Get first page of passcodes for a lock
+      params = TTlockClient.Types.new_passcode_list_params(lock_id)
+      {:ok, response} = TTlockClient.Passcodes.get_passcode_list(params)
+
+      # Search for specific passcodes
+      params = TTlockClient.Types.new_passcode_list_params(lock_id, "Guest", 1, 50, 1)
+      {:ok, response} = TTlockClient.Passcodes.get_passcode_list(params)
+
+      # Access the results
+      %{list: passcodes, total: total_count} = response
+
+  ## Returns
+    * `{:ok, passcode_list_response}` - Success with passcode list data
+    * `{:error, :not_authenticated}` - Authentication required
+    * `{:error, reason}` - API call failed
+  """
+  @spec get_passcode_list(TTlockClient.Types.passcode_list_params()) :: passcode_api_result()
+  def get_passcode_list(passcode_list_params() = params) do
+    lock_id = passcode_list_params(params, :lock_id)
+
+    Logger.debug("Fetching passcode list for lock ID: #{lock_id}")
+
+    with {:ok, auth_data} <- get_auth_data(),
+         {:ok, query_params} <- build_passcode_list_params(params, auth_data),
+         {:ok, response} <- make_get_request(@passcode_list_endpoint, query_params) do
+      Logger.info("Successfully retrieved passcode list for lock ID: #{lock_id} - Total: #{Map.get(response, "total", 0)}")
+      {:ok, parse_passcode_list_response(response)}
+    end
+  end
+
+  @doc """
+  Convenience function to get all passcodes for a lock.
+
+  ## Parameters
+    * `lock_id` - The lock ID to get passcodes for
+    * `search_str` - Optional search string
+
+  ## Example
+      {:ok, %{list: passcodes}} = TTlockClient.Passcodes.get_lock_passcodes(12345)
+  """
+  @spec get_lock_passcodes(integer(), String.t() | nil) :: passcode_api_result()
+  def get_lock_passcodes(lock_id, search_str \\ nil) do
+    params = new_passcode_list_params(lock_id, search_str, 1, 200, @order_by_time_desc)
+    get_passcode_list(params)
+  end
+
+  @doc """
+  Convenience function to search passcodes by name or passcode value.
+
+  ## Parameters
+    * `lock_id` - The lock ID to search in
+    * `search_term` - Search term (name or exact passcode match)
+
+  ## Example
+      {:ok, results} = TTlockClient.Passcodes.search_passcodes(12345, "Guest")
+  """
+  @spec search_passcodes(integer(), String.t()) :: passcode_api_result()
+  def search_passcodes(lock_id, search_term) do
+    params = new_passcode_list_params(lock_id, search_term, 1, 200, @order_by_name)
+    get_passcode_list(params)
   end
 
   @doc """
@@ -174,6 +252,17 @@ defmodule TTlockClient.Passcodes do
     %{
       bluetooth: @add_type_bluetooth,
       gateway: @add_type_gateway
+    }
+  end
+
+  @doc """
+  Helper function to get order by constants.
+  """
+  def order_by_options do
+    %{
+      name: @order_by_name,
+      time_desc: @order_by_time_desc,
+      name_desc: @order_by_name_desc
     }
   end
 
@@ -215,10 +304,10 @@ defmodule TTlockClient.Passcodes do
       client_id = client_config(client_config, :client_id)
       {:ok, {access_token, client_id}}
     else
-      {:error, :not_authenticated} -> 
+      {:error, :not_authenticated} ->
         Logger.error("Authentication required for passcode API calls")
         {:error, :not_authenticated}
-      
+
       {:error, reason} = error ->
         Logger.error("Failed to get authentication data: #{inspect(reason)}")
         error
@@ -242,7 +331,7 @@ defmodule TTlockClient.Passcodes do
       "date" => current_timestamp_ms()
     }
 
-    optional_params = 
+    optional_params =
       []
       |> maybe_add_param("keyboardPwdName", passcode_add_params(params, :keyboard_pwd_name))
       |> maybe_add_param("startDate", passcode_add_params(params, :start_date))
@@ -251,6 +340,27 @@ defmodule TTlockClient.Passcodes do
 
     form_params = Map.merge(base_params, optional_params)
     {:ok, form_params}
+  end
+
+  @spec build_passcode_list_params(TTlockClient.Types.passcode_list_params(), {String.t(), String.t()}) :: {:ok, map()}
+  defp build_passcode_list_params(params, {access_token, client_id}) do
+    base_params = %{
+      "clientId" => client_id,
+      "accessToken" => access_token,
+      "lockId" => passcode_list_params(params, :lock_id),
+      "pageNo" => passcode_list_params(params, :page_no),
+      "pageSize" => passcode_list_params(params, :page_size),
+      "orderBy" => passcode_list_params(params, :order_by),
+      "date" => current_timestamp_ms()
+    }
+
+    optional_params =
+      []
+      |> maybe_add_param("searchStr", passcode_list_params(params, :search_str))
+      |> Enum.into(%{})
+
+    query_params = Map.merge(base_params, optional_params)
+    {:ok, query_params}
   end
 
   @spec maybe_add_param([{String.t(), any()}], String.t(), any()) :: [{String.t(), any()}]
@@ -264,15 +374,15 @@ defmodule TTlockClient.Passcodes do
         base_url = client_config(config, :base_url)
         url = base_url <> endpoint
         body = URI.encode_query(form_params)
-        
+
         headers = [
           {"content-type", "application/x-www-form-urlencoded"}
         ]
-        
+
         Logger.debug("Making passcode API request to: #{endpoint}")
-        
+
         request = Finch.build(:post, url, headers, body)
-        
+
         case Finch.request(request, TTlockClient.Finch, receive_timeout: @request_timeout) do
           {:ok, %Finch.Response{status: 200, body: response_body}} ->
             parse_response(response_body)
@@ -293,10 +403,46 @@ defmodule TTlockClient.Passcodes do
     end
   end
 
+  @spec make_get_request(String.t(), map()) :: {:ok, map()} | {:error, term()}
+  defp make_get_request(endpoint, query_params) do
+    case get_client_config() do
+      {:ok, config} ->
+        base_url = client_config(config, :base_url)
+        url = base_url <> endpoint <> "?" <> URI.encode_query(query_params)
+
+        Logger.debug("Making passcode GET API request to: #{endpoint}")
+
+        request = Finch.build(:get, url, [])
+
+        case Finch.request(request, TTlockClient.Finch, receive_timeout: @request_timeout) do
+          {:ok, %Finch.Response{status: 200, body: response_body}} ->
+            parse_response(response_body)
+
+          {:ok, %Finch.Response{status: status, body: response_body}} ->
+            Logger.warning("Passcode GET API request failed with status #{status}: #{response_body}")
+            parse_error_response(response_body)
+
+          {:error, %Mint.TransportError{reason: reason}} ->
+            {:error, {:transport_error, reason}}
+
+          {:error, reason} ->
+            {:error, {:request_error, reason}}
+        end
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
   @spec parse_response(String.t()) :: {:ok, map()} | {:error, term()}
   defp parse_response(response_body) do
     case Jason.decode(response_body) do
       {:ok, %{"keyboardPwdId" => _} = response} ->
+        # Add passcode response
+        {:ok, response}
+
+      {:ok, %{"list" => _} = response} ->
+        # List passcodes response
         {:ok, response}
 
       {:ok, parsed} ->
@@ -332,6 +478,17 @@ defmodule TTlockClient.Passcodes do
   defp parse_passcode_add_response(response) do
     %{
       keyboardPwdId: response["keyboardPwdId"]
+    }
+  end
+
+  @spec parse_passcode_list_response(map()) :: map()
+  defp parse_passcode_list_response(response) do
+    %{
+      list: response["list"] || [],
+      pageNo: response["pageNo"] || 1,
+      pageSize: response["pageSize"] || 20,
+      pages: response["pages"] || 1,
+      total: response["total"] || 0
     }
   end
 
