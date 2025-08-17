@@ -213,6 +213,10 @@ export TTLOCK_PASSWORD="your_password"
 - `add_permanent_passcode/2,3` - Add a permanent passcode via gateway
 - `add_temporary_passcode/4,5` - Add a time-limited passcode via gateway
 - `add_passcode/2,3,4,5,6,7,8` - Add passcode with full parameter control
+- `change_passcode/2,3,4,5,6,7` - Change passcode name, value, or validity period
+- `change_passcode_name/3` - Change only the passcode name
+- `change_passcode_value/3` - Change only the passcode value
+- `change_passcode_period/4` - Change only the passcode validity period
 - `delete_passcode/2` - Delete a passcode via gateway
 - `delete_passcode_via_gateway/2` - Delete a passcode via gateway (alias)
 - `get_passcodes/1,2,3,4,5` - Get paginated list of passcodes for a lock
@@ -224,6 +228,7 @@ export TTLOCK_PASSWORD="your_password"
 - `TTlockClient.Locks.get_lock_list/1` - Direct lock list API call
 - `TTlockClient.Locks.get_lock_detail/1` - Direct lock detail API call
 - `TTlockClient.Passcodes.add_passcode/1` - Direct passcode add API call
+- `TTlockClient.Passcodes.change_passcode/1` - Direct passcode change API call
 - `TTlockClient.Passcodes.delete_passcode/1` - Direct passcode delete API call
 - `TTlockClient.Passcodes.get_passcode_list/1` - Direct passcode list API call
 - `TTlockClient.Types.*` - Type definitions and helper functions
@@ -253,6 +258,30 @@ end_time = DateTime.add(start_time, 7, :day)
 {:ok, result} = 
   TTlockClient.add_passcode(12345, 555999, "Custom", 3, start_ms, end_ms, 2)
 ```
+
+### Changing Passcodes
+
+```elixir
+# Change passcode name only
+{:ok, %{errcode: 0, errmsg: "success"}} = 
+  TTlockClient.change_passcode_name(12345, 67890, "Updated Guest Access")
+
+# Change passcode value only
+{:ok, result} = 
+  TTlockClient.change_passcode_value(12345, 67890, 999888)
+
+# Change validity period only
+start_time = DateTime.utc_now()
+end_time = DateTime.add(start_time, 30, :day)
+{:ok, result} = 
+  TTlockClient.change_passcode_period(12345, 67890, start_time, end_time)
+
+# Change multiple properties at once
+{:ok, result} = 
+  TTlockClient.change_passcode(12345, 67890, "New Name", 888999, start_time, end_time)
+```
+
+**Note**: Passcode changes work via the cloud API for WiFi locks or locks connected to a gateway. At least one change parameter must be provided (name, passcode value, or validity period).
 
 ### Deleting Passcodes
 
@@ -377,6 +406,9 @@ elixir passcodes_example.exs advanced
 
 # Passcode deletion examples
 elixir passcodes_example.exs delete
+
+# Passcode change examples
+elixir passcodes_example.exs change
 
 # Passcode time helper examples
 elixir passcodes_example.exs helpers

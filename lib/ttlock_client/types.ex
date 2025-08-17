@@ -65,6 +65,17 @@ defmodule TTlockClient.Types do
     keyboard_pwd_id: nil
   )
 
+  # Passcode change request parameters record
+  Record.defrecord(:passcode_change_params,
+    lock_id: nil,
+    keyboard_pwd_id: nil,
+    keyboard_pwd_name: nil,
+    new_keyboard_pwd: nil,
+    start_date: nil,
+    end_date: nil,
+    change_type: 2
+  )
+
   @type client_config :: record(:client_config,
           client_id: String.t(),
           client_secret: String.t(),
@@ -115,6 +126,16 @@ defmodule TTlockClient.Types do
   @type passcode_delete_params :: record(:passcode_delete_params,
           lock_id: integer(),
           keyboard_pwd_id: integer()
+        )
+
+  @type passcode_change_params :: record(:passcode_change_params,
+          lock_id: integer(),
+          keyboard_pwd_id: integer(),
+          keyboard_pwd_name: String.t() | nil,
+          new_keyboard_pwd: integer() | nil,
+          start_date: integer() | nil,
+          end_date: integer() | nil,
+          change_type: integer()
         )
 
   @type oauth_response :: %{
@@ -210,7 +231,12 @@ defmodule TTlockClient.Types do
           errmsg: String.t()
         }
 
-  @type passcode_api_result :: {:ok, passcode_add_response() | passcode_list_response() | passcode_delete_response()} | {:error, oauth_error() | atom()}
+  @type passcode_change_response :: %{
+          errcode: integer(),
+          errmsg: String.t()
+        }
+
+  @type passcode_api_result :: {:ok, passcode_add_response() | passcode_list_response() | passcode_delete_response() | passcode_change_response()} | {:error, oauth_error() | atom()}
 
   # Error codes
   @expired_token_error 10004
@@ -341,6 +367,31 @@ defmodule TTlockClient.Types do
     passcode_delete_params(
       lock_id: lock_id,
       keyboard_pwd_id: keyboard_pwd_id
+    )
+  end
+
+  @doc """
+  Creates passcode change request parameters.
+
+  ## Parameters
+    * `lock_id` - The lock ID containing the passcode
+    * `keyboard_pwd_id` - The passcode ID to change
+    * `keyboard_pwd_name` - Optional new name for the passcode
+    * `new_keyboard_pwd` - Optional new passcode value (4-9 digits)
+    * `start_date` - Optional new start time in milliseconds
+    * `end_date` - Optional new end time in milliseconds
+    * `change_type` - Change method: 2 = Gateway/WiFi (default 2)
+  """
+  @spec new_passcode_change_params(integer(), integer(), String.t() | nil, integer() | nil, integer() | nil, integer() | nil, integer()) :: passcode_change_params()
+  def new_passcode_change_params(lock_id, keyboard_pwd_id, keyboard_pwd_name \\ nil, new_keyboard_pwd \\ nil, start_date \\ nil, end_date \\ nil, change_type \\ 2) do
+    passcode_change_params(
+      lock_id: lock_id,
+      keyboard_pwd_id: keyboard_pwd_id,
+      keyboard_pwd_name: keyboard_pwd_name,
+      new_keyboard_pwd: new_keyboard_pwd,
+      start_date: start_date,
+      end_date: end_date,
+      change_type: change_type
     )
   end
 

@@ -3,7 +3,7 @@ defmodule TTlockClient.Passcodes do
   TTLock Passcodes API client.
 
   Provides functions to interact with TTLock's passcode management endpoints.
-  Handles adding, managing, and deleting custom passcodes for locks.
+  Handles adding, managing, deleting, and changing custom passcodes for locks.
 
   All functions automatically retrieve valid access tokens and client configuration
   from the TTlockClient.AuthManager, so authentication must be set up first.
@@ -15,8 +15,11 @@ defmodule TTlockClient.Passcodes do
 
   ## Add Methods
 
-  - **Bluetooth (addType 1)**: Use mobile app/SDK first, then sync to cloud
   - **Gateway/WiFi (addType 2)**: Add directly via gateway or WiFi lock
+
+  ## Change Methods
+
+  - **Gateway/WiFi (changeType 2)**: Change directly via gateway or WiFi lock
 
   ## Examples
 
@@ -31,6 +34,14 @@ defmodule TTlockClient.Passcodes do
         2          # via gateway
       )
       {:ok, result} = TTlockClient.Passcodes.add_passcode(params)
+
+      # Change a passcode name
+      change_params = TTlockClient.Types.new_passcode_change_params(
+        12345,     # lock_id
+        67890,     # passcode_id
+        "New Name" # new name
+      )
+      {:ok, result} = TTlockClient.Passcodes.change_passcode(change_params)
 
       # Delete a passcode
       delete_params = TTlockClient.Types.new_passcode_delete_params(
@@ -49,10 +60,12 @@ defmodule TTlockClient.Passcodes do
   @type passcode_add_params :: TTlockClient.Types.passcode_add_params()
   @type passcode_list_params :: TTlockClient.Types.passcode_list_params()
   @type passcode_delete_params :: TTlockClient.Types.passcode_delete_params()
+  @type passcode_change_params :: TTlockClient.Types.passcode_change_params()
 
   @passcode_add_endpoint "/v3/keyboardPwd/add"
   @passcode_list_endpoint "/v3/lock/listKeyboardPwd"
   @passcode_delete_endpoint "/v3/keyboardPwd/delete"
+  @passcode_change_endpoint "/v3/keyboardPwd/change"
   @request_timeout 30_000
 
   # Passcode type constants
@@ -60,8 +73,10 @@ defmodule TTlockClient.Passcodes do
   @passcode_type_period 3
 
   # Add type constants
-  @add_type_bluetooth 1
   @add_type_gateway 2
+
+  # Change type constants
+  @change_type_gateway 2
 
   # Order by constants
   @order_by_name 0
@@ -113,6 +128,115 @@ defmodule TTlockClient.Passcodes do
       Logger.info("Successfully added passcode to lock ID: #{lock_id}")
       {:ok, parse_passcode_add_response(response)}
     end
+  end
+
+  @doc """
+  Changes a passcode's name, value, or valid period.
+
+  Can change any combination of passcode properties. At least one of the optional
+  parameters must be provided to perform a change.
+
+  ## Parameters
+    * `params` - Passcode change parameters containing lock ID, passcode ID, and changes
+
+  ## Examples
+      # Change passcode name only
+      params = TTlockClient.Types.new_passcode_change_params(
+        12345, 67890, "New Name"
+      )
+      {:ok, result} = TTlockClient.Passcodes.change_passcode(params)
+
+      # Change passcode value
+      params = TTlockClient.Types.new_passcode_change_params(
+        12345, 67890, nil, 999888
+      )
+      {:ok, result} = TTlockClient.Passcodes.change_passcode(params)
+
+      # Change validity period
+      start_ms = DateTime.utc_now() |> DateTime.to_unix(:millisecond)
+      end_ms = DateTime.add(DateTime.utc_now(), 30, :day) |> DateTime.to_unix(:millisecond)
+
+      params = TTlockClient.Types.new_passcode_change_params(
+        12345, 67890, nil, nil, start_ms, end_ms
+      )
+      {:ok, result} = TTlockClient.Passcodes.change_passcode(params)
+
+  ## Returns
+    * `{:ok, passcode_change_response}` - Success with status information
+    * `{:error, :not_authenticated}` - Authentication required
+    * `{:error, reason}` - API call failed
+  """
+  @spec change_passcode(TTlockClient.Types.passcode_change_params()) :: passcode_api_result()
+  def change_passcode(passcode_change_params() = params) do
+    lock_id = passcode_change_params(params, :lock_id)
+    passcode_id = passcode_change_params(params, :keyboard_pwd_id)
+
+    Logger.debug("Changing passcode #{passcode_id} for lock ID: #{lock_id}")
+
+    with :ok <- validate_passcode_change_params(params),
+         {:ok, auth_data} <- get_auth_data(),
+         {:ok, form_params} <- build_passcode_change_params(params, auth_data),
+         {:ok, response} <- make_api_request(@passcode_change_endpoint, form_params) do
+      Logger.info("Successfully changed passcode #{passcode_id} for lock ID: #{lock_id}")
+      {:ok, parse_passcode_change_response(response)}
+    end
+  end
+
+  @doc """
+  Convenience function to change only a passcode's name.
+
+  ## Parameters
+    * `lock_id` - The lock ID containing the passcode
+    * `passcode_id` - The passcode ID to change
+    * `new_name` - The new name for the passcode
+
+  ## Example
+      {:ok, result} = TTlockClient.Passcodes.change_passcode_name(12345, 67890, "Updated Name")
+  """
+  @spec change_passcode_name(integer(), integer(), String.t()) :: passcode_api_result()
+  def change_passcode_name(lock_id, passcode_id, new_name) do
+    params = new_passcode_change_params(lock_id, passcode_id, new_name)
+    change_passcode(params)
+  end
+
+  @doc """
+  Convenience function to change only a passcode's value.
+
+  ## Parameters
+    * `lock_id` - The lock ID containing the passcode
+    * `passcode_id` - The passcode ID to change
+    * `new_passcode` - The new passcode value (4-9 digits)
+
+  ## Example
+      {:ok, result} = TTlockClient.Passcodes.change_passcode_value(12345, 67890, 999888)
+  """
+  @spec change_passcode_value(integer(), integer(), integer()) :: passcode_api_result()
+  def change_passcode_value(lock_id, passcode_id, new_passcode) do
+    params = new_passcode_change_params(lock_id, passcode_id, nil, new_passcode)
+    change_passcode(params)
+  end
+
+  @doc """
+  Convenience function to change only a passcode's validity period.
+
+  ## Parameters
+    * `lock_id` - The lock ID containing the passcode
+    * `passcode_id` - The passcode ID to change
+    * `start_date` - New start time (DateTime or milliseconds)
+    * `end_date` - New end time (DateTime or milliseconds)
+
+  ## Example
+      start_time = DateTime.utc_now()
+      end_time = DateTime.add(start_time, 30, :day)
+      {:ok, result} = TTlockClient.Passcodes.change_passcode_period(12345, 67890, start_time, end_time)
+  """
+  @spec change_passcode_period(integer(), integer(), DateTime.t() | integer(), DateTime.t() | integer()) :: passcode_api_result()
+  def change_passcode_period(lock_id, passcode_id, start_date, end_date) do
+    start_ms = datetime_to_milliseconds(start_date)
+    end_ms = datetime_to_milliseconds(end_date)
+
+    params = new_passcode_change_params(lock_id, passcode_id, nil, nil, start_ms, end_ms)
+    change_passcode(params)
   end
 
   @doc """
@@ -301,8 +425,16 @@ defmodule TTlockClient.Passcodes do
   """
   def add_types do
     %{
-      bluetooth: @add_type_bluetooth,
       gateway: @add_type_gateway
+    }
+  end
+
+  @doc """
+  Helper function to get change type constants.
+  """
+  def change_types do
+    %{
+      gateway: @change_type_gateway
     }
   end
 
@@ -342,6 +474,39 @@ defmodule TTlockClient.Passcodes do
 
       keyboard_pwd_type == @passcode_type_period and start_date >= end_date ->
         {:error, {:validation_error, "start_date must be before end_date"}}
+
+      true ->
+        :ok
+    end
+  end
+
+  @spec validate_passcode_change_params(passcode_change_params()) :: :ok | {:error, term()}
+  defp validate_passcode_change_params(params) do
+    lock_id = passcode_change_params(params, :lock_id)
+    keyboard_pwd_id = passcode_change_params(params, :keyboard_pwd_id)
+    keyboard_pwd_name = passcode_change_params(params, :keyboard_pwd_name)
+    new_keyboard_pwd = passcode_change_params(params, :new_keyboard_pwd)
+    start_date = passcode_change_params(params, :start_date)
+    end_date = passcode_change_params(params, :end_date)
+
+    cond do
+      not is_integer(lock_id) or lock_id <= 0 ->
+        {:error, {:validation_error, "lock_id must be a positive integer"}}
+
+      not is_integer(keyboard_pwd_id) or keyboard_pwd_id <= 0 ->
+        {:error, {:validation_error, "keyboard_pwd_id must be a positive integer"}}
+
+      new_keyboard_pwd != nil and (not is_integer(new_keyboard_pwd) or new_keyboard_pwd < 1000 or new_keyboard_pwd > 999_999_999) ->
+        {:error, {:validation_error, "new_keyboard_pwd must be 4-9 digits"}}
+
+      (start_date != nil and end_date == nil) or (start_date == nil and end_date != nil) ->
+        {:error, {:validation_error, "start_date and end_date must both be provided when changing validity period"}}
+
+      start_date != nil and end_date != nil and start_date >= end_date ->
+        {:error, {:validation_error, "start_date must be before end_date"}}
+
+      keyboard_pwd_name == nil and new_keyboard_pwd == nil and start_date == nil and end_date == nil ->
+        {:error, {:validation_error, "at least one change parameter must be provided (name, passcode, or dates)"}}
 
       true ->
         :ok
@@ -404,6 +569,29 @@ defmodule TTlockClient.Passcodes do
       |> maybe_add_param("keyboardPwdName", passcode_add_params(params, :keyboard_pwd_name))
       |> maybe_add_param("startDate", passcode_add_params(params, :start_date))
       |> maybe_add_param("endDate", passcode_add_params(params, :end_date))
+      |> Enum.into(%{})
+
+    form_params = Map.merge(base_params, optional_params)
+    {:ok, form_params}
+  end
+
+  @spec build_passcode_change_params(TTlockClient.Types.passcode_change_params(), {String.t(), String.t()}) :: {:ok, map()}
+  defp build_passcode_change_params(params, {access_token, client_id}) do
+    base_params = %{
+      "clientId" => client_id,
+      "accessToken" => access_token,
+      "lockId" => passcode_change_params(params, :lock_id),
+      "keyboardPwdId" => passcode_change_params(params, :keyboard_pwd_id),
+      "changeType" => passcode_change_params(params, :change_type),
+      "date" => current_timestamp_ms()
+    }
+
+    optional_params =
+      []
+      |> maybe_add_param("keyboardPwdName", passcode_change_params(params, :keyboard_pwd_name))
+      |> maybe_add_param("newKeyboardPwd", passcode_change_params(params, :new_keyboard_pwd))
+      |> maybe_add_param("startDate", passcode_change_params(params, :start_date))
+      |> maybe_add_param("endDate", passcode_change_params(params, :end_date))
       |> Enum.into(%{})
 
     form_params = Map.merge(base_params, optional_params)
@@ -528,7 +716,7 @@ defmodule TTlockClient.Passcodes do
         {:ok, response}
 
       {:ok, %{"errcode" => _} = response} ->
-        # Delete passcode response (and other simple responses)
+        # Delete/change passcode response (and other simple responses)
         {:ok, response}
 
       {:ok, parsed} ->
@@ -564,6 +752,14 @@ defmodule TTlockClient.Passcodes do
   defp parse_passcode_add_response(response) do
     %{
       keyboardPwdId: response["keyboardPwdId"]
+    }
+  end
+
+  @spec parse_passcode_change_response(map()) :: map()
+  defp parse_passcode_change_response(response) do
+    %{
+      errcode: response["errcode"],
+      errmsg: response["errmsg"]
     }
   end
 

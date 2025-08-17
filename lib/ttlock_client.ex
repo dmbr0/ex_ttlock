@@ -409,16 +409,12 @@ defmodule TTlockClient do
     * `passcode_type` - 2 = permanent, 3 = period
     * `start_date` - Start time in milliseconds (required for period type)
     * `end_date` - End time in milliseconds (required for period type)
-    * `add_type` - 1 = Bluetooth, 2 = Gateway/WiFi
+    * `add_type` - 2 = Gateway/WiFi
 
   ## Examples
       # Permanent passcode via gateway
       {:ok, result} = TTlockClient.add_passcode(12345, 123456, "Guest", 2, nil, nil, 2)
 
-      # Temporary passcode via Bluetooth (requires mobile app first)
-      start_ms = DateTime.utc_now() |> DateTime.to_unix(:millisecond)
-      end_ms = DateTime.add(DateTime.utc_now(), 7, :day) |> DateTime.to_unix(:millisecond)
-      {:ok, result} = TTlockClient.add_passcode(12345, 555999, "Visitor", 3, start_ms, end_ms, 1)
 
   ## Returns
     * `{:ok, response}` - Contains keyboardPwdId
@@ -429,6 +425,114 @@ defmodule TTlockClient do
   def add_passcode(lock_id, passcode, name \\ nil, passcode_type \\ 3, start_date \\ nil, end_date \\ nil, add_type \\ 2) do
     params = TTlockClient.Types.new_passcode_add_params(lock_id, passcode, name, passcode_type, start_date, end_date, add_type)
     Passcodes.add_passcode(params)
+  end
+
+  @doc """
+  Changes a passcode's name, value, or validity period.
+
+  Can change any combination of passcode properties. At least one of the optional
+  parameters must be provided to perform a change.
+
+  ## Parameters
+    * `lock_id` - The lock ID containing the passcode
+    * `passcode_id` - The passcode ID to change
+    * `new_name` - Optional new name for the passcode
+    * `new_passcode` - Optional new passcode value (4-9 digits)
+    * `start_date` - Optional new start time (DateTime or milliseconds)
+    * `end_date` - Optional new end time (DateTime or milliseconds)
+
+  ## Examples
+      # Change name only
+      {:ok, result} = TTlockClient.change_passcode(12345, 67890, "New Name")
+
+      # Change passcode value only
+      {:ok, result} = TTlockClient.change_passcode(12345, 67890, nil, 999888)
+
+      # Change validity period only
+      start_time = DateTime.utc_now()
+      end_time = DateTime.add(start_time, 30, :day)
+      {:ok, result} = TTlockClient.change_passcode(12345, 67890, nil, nil, start_time, end_time)
+
+      # Change multiple properties
+      {:ok, result} = TTlockClient.change_passcode(12345, 67890, "Updated", 888999, start_time, end_time)
+
+  ## Returns
+    * `{:ok, response}` - Success with status information
+    * `{:error, reason}` - Request failed
+  """
+  @spec change_passcode(integer(), integer(), String.t() | nil, integer() | nil, DateTime.t() | integer() | nil, DateTime.t() | integer() | nil) ::
+    {:ok, map()} | {:error, term()}
+  def change_passcode(lock_id, passcode_id, new_name \\ nil, new_passcode \\ nil, start_date \\ nil, end_date \\ nil) do
+    # Convert DateTime to milliseconds if needed
+    start_ms = if start_date, do: datetime_to_milliseconds(start_date), else: nil
+    end_ms = if end_date, do: datetime_to_milliseconds(end_date), else: nil
+
+    params = TTlockClient.Types.new_passcode_change_params(lock_id, passcode_id, new_name, new_passcode, start_ms, end_ms)
+    Passcodes.change_passcode(params)
+  end
+
+  @doc """
+  Changes only a passcode's name.
+
+  ## Parameters
+    * `lock_id` - The lock ID containing the passcode
+    * `passcode_id` - The passcode ID to change
+    * `new_name` - The new name for the passcode
+
+  ## Examples
+      {:ok, result} = TTlockClient.change_passcode_name(12345, 67890, "Updated Guest Access")
+
+  ## Returns
+    * `{:ok, response}` - Success with status information
+    * `{:error, reason}` - Request failed
+  """
+  @spec change_passcode_name(integer(), integer(), String.t()) :: {:ok, map()} | {:error, term()}
+  def change_passcode_name(lock_id, passcode_id, new_name) do
+    Passcodes.change_passcode_name(lock_id, passcode_id, new_name)
+  end
+
+  @doc """
+  Changes only a passcode's value.
+
+  ## Parameters
+    * `lock_id` - The lock ID containing the passcode
+    * `passcode_id` - The passcode ID to change
+    * `new_passcode` - The new passcode value (4-9 digits)
+
+  ## Examples
+      {:ok, result} = TTlockClient.change_passcode_value(12345, 67890, 999888)
+
+  ## Returns
+    * `{:ok, response}` - Success with status information
+    * `{:error, reason}` - Request failed
+  """
+  @spec change_passcode_value(integer(), integer(), integer()) :: {:ok, map()} | {:error, term()}
+  def change_passcode_value(lock_id, passcode_id, new_passcode) do
+    Passcodes.change_passcode_value(lock_id, passcode_id, new_passcode)
+  end
+
+  @doc """
+  Changes only a passcode's validity period.
+
+  ## Parameters
+    * `lock_id` - The lock ID containing the passcode
+    * `passcode_id` - The passcode ID to change
+    * `start_date` - New start time (DateTime or milliseconds)
+    * `end_date` - New end time (DateTime or milliseconds)
+
+  ## Examples
+      start_time = DateTime.utc_now()
+      end_time = DateTime.add(start_time, 30, :day)
+      {:ok, result} = TTlockClient.change_passcode_period(12345, 67890, start_time, end_time)
+
+  ## Returns
+    * `{:ok, response}` - Success with status information
+    * `{:error, reason}` - Request failed
+  """
+  @spec change_passcode_period(integer(), integer(), DateTime.t() | integer(), DateTime.t() | integer()) ::
+    {:ok, map()} | {:error, term()}
+  def change_passcode_period(lock_id, passcode_id, start_date, end_date) do
+    Passcodes.change_passcode_period(lock_id, passcode_id, start_date, end_date)
   end
 
   @doc """
@@ -544,5 +648,16 @@ defmodule TTlockClient do
   @spec search_passcodes(integer(), String.t()) :: {:ok, map()} | {:error, term()}
   def search_passcodes(lock_id, search_term) do
     Passcodes.search_passcodes(lock_id, search_term)
+  end
+
+  # Private helper functions
+
+  @spec datetime_to_milliseconds(DateTime.t() | integer()) :: integer()
+  defp datetime_to_milliseconds(%DateTime{} = dt) do
+    DateTime.to_unix(dt, :millisecond)
+  end
+
+  defp datetime_to_milliseconds(ms) when is_integer(ms) do
+    ms
   end
 end
