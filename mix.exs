@@ -8,8 +8,9 @@ defmodule TTlockClient.MixProject do
       elixir: "~> 1.18",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
+
       name: "TTlockClient",
-      description: "Elixir client library for TTLock Open Platform API",
+      description: description(),
       package: package(),
       docs: docs(),
       aliases: aliases(),
@@ -21,6 +22,11 @@ defmodule TTlockClient.MixProject do
       dialyzer: [
         plt_file: {:no_warn, "priv/plts/dialyzer.plt"},
         plt_add_apps: [:ex_unit]
+      source_url: "https://github.com/dmbr0/ex_ttlock",
+      docs: [
+        main: "TTlockClient",
+        extras: ["README.md"]
+
       ]
     ]
   end
@@ -50,7 +56,9 @@ defmodule TTlockClient.MixProject do
       {:excoveralls, "~> 0.18", only: :test},
       {:castore, "~> 1.0", only: :test},
       {:bypass, "~> 2.1", only: :test},
-      {:mix_test_watch, "~> 1.0", only: [:dev, :test], runtime: false}
+      {:mix_test_watch, "~> 1.0", only: [:dev, :test], runtime: false},
+      {:httpoison, "~> 2.0"},
+      {:ex_doc, "~> 0.31", only: :dev, runtime: false}
     ]
   end
 
@@ -90,6 +98,22 @@ defmodule TTlockClient.MixProject do
       "test.ci": ["coveralls.json"],
       quality: ["format", "credo --strict", "dialyzer"],
       "quality.fix": ["format", "credo --strict --fix-all"]
+    ]
+  end
+
+  defp description do
+    "An Elixir client library for TTLock API integration, providing OAuth authentication, lock management, and passcode management functionality."
+  end
+
+  defp package do
+    [
+      name: "ex_ttlock",
+      files: ~w(lib .formatter.exs mix.exs README.md LICENSE),
+      licenses: ["MIT"],
+      links: %{
+        "GitHub" => "https://github.com/dmbr0/ex_ttlock"
+      },
+      maintainers: ["Alex Whitney"]
     ]
   end
 end

@@ -8,7 +8,12 @@ An Elixir client library for the TTLock Open Platform API with centralized OAuth
 - **Automatic Token Refresh**: Proactive token refresh before expiry
 - **Thread-Safe**: Safe concurrent access to authentication state
 - **OTP Compliant**: Proper supervision and fault tolerance
-- **Zero Module Dependencies**: No authentication logic scattered across modules
+- OAuth2 authentication with TTLock API
+- Lock management operations (list locks, get lock details)
+- Passcode management (add, delete, change, list passcodes)
+- Support for different passcode types (permanent, period, single use)
+- Automatic token refresh handling
+
 
 ## Installation
 
