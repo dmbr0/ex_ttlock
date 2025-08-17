@@ -432,6 +432,50 @@ defmodule TTlockClient do
   end
 
   @doc """
+  Deletes a passcode from a lock via gateway.
+
+  The passcode will be deleted directly via the cloud API for WiFi locks
+  or locks connected to a gateway.
+
+  ## Parameters
+    * `lock_id` - The lock ID containing the passcode
+    * `passcode_id` - The passcode ID to delete
+
+  ## Examples
+      {:ok, result} = TTlockClient.delete_passcode(12345, 67890)
+
+  ## Returns
+    * `{:ok, response}` - Success with status information
+    * `{:error, reason}` - Request failed
+  """
+  @spec delete_passcode(integer(), integer()) :: {:ok, map()} | {:error, term()}
+  def delete_passcode(lock_id, passcode_id) do
+    params = TTlockClient.Types.new_passcode_delete_params(lock_id, passcode_id)
+    Passcodes.delete_passcode(params)
+  end
+
+  @doc """
+  Convenience function to delete a passcode via gateway.
+
+  This is an alias for `delete_passcode/2` for clarity.
+
+  ## Parameters
+    * `lock_id` - The lock ID containing the passcode
+    * `passcode_id` - The passcode ID to delete
+
+  ## Examples
+      {:ok, result} = TTlockClient.delete_passcode_via_gateway(12345, 67890)
+
+  ## Returns
+    * `{:ok, response}` - Success with status information
+    * `{:error, reason}` - Request failed
+  """
+  @spec delete_passcode_via_gateway(integer(), integer()) :: {:ok, map()} | {:error, term()}
+  def delete_passcode_via_gateway(lock_id, passcode_id) do
+    Passcodes.delete_passcode_via_gateway(lock_id, passcode_id)
+  end
+
+  @doc """
   Gets all passcodes for a lock.
 
   ## Parameters

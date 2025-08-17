@@ -82,6 +82,14 @@ defmodule TTlockClientTest do
   test "add_passcode returns error when not authenticated" do
     assert {:error, :not_authenticated} = TTlockClient.add_passcode(12345, 123456, "Guest", 2, nil, nil, 2)
   end
+
+  test "delete_passcode returns error when not authenticated" do
+    assert {:error, :not_authenticated} = TTlockClient.delete_passcode(12345, 67890)
+  end
+
+  test "delete_passcode_via_gateway returns error when not authenticated" do
+    assert {:error, :not_authenticated} = TTlockClient.delete_passcode_via_gateway(12345, 67890)
+  end
 end
 
 defmodule TTlockClient.TypesTest do
@@ -126,6 +134,13 @@ defmodule TTlockClient.TypesTest do
     assert auth_credentials(credentials, :username) == "username"
     # MD5 of "password" in lowercase hex
     assert auth_credentials(credentials, :password_hash) == "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8"
+  end
+
+  test "creates passcode delete params" do
+    params = new_passcode_delete_params(12345, 67890)
+
+    assert passcode_delete_params(params, :lock_id) == 12345
+    assert passcode_delete_params(params, :keyboard_pwd_id) == 67890
   end
 
   test "token_expired? returns true for nil expires_at" do
@@ -238,6 +253,21 @@ defmodule TTlockClient.PasscodesTest do
     assert {:error, {:validation_error, _}} = Passcodes.add_passcode(params)
   end
 
+  test "delete_passcode returns error when not authenticated" do
+    params = new_passcode_delete_params(12345, 67890)
+    assert {:error, :not_authenticated} = Passcodes.delete_passcode(params)
+  end
+
+  test "validates delete passcode parameters - invalid lock_id" do
+    params = new_passcode_delete_params(-1, 67890)
+    assert {:error, {:validation_error, _}} = Passcodes.delete_passcode(params)
+  end
+
+  test "validates delete passcode parameters - invalid passcode_id" do
+    params = new_passcode_delete_params(12345, -1)
+    assert {:error, {:validation_error, _}} = Passcodes.delete_passcode(params)
+  end
+
   test "add_permanent_passcode returns error when not authenticated" do
     assert {:error, :not_authenticated} = Passcodes.add_permanent_passcode(12345, 123456, "Guest")
   end
@@ -246,6 +276,10 @@ defmodule TTlockClient.PasscodesTest do
     start_time = DateTime.utc_now()
     end_time = DateTime.add(start_time, 7, :day)
     assert {:error, :not_authenticated} = Passcodes.add_temporary_passcode(12345, 987654, start_time, end_time, "Visitor")
+  end
+
+  test "delete_passcode_via_gateway returns error when not authenticated" do
+    assert {:error, :not_authenticated} = Passcodes.delete_passcode_via_gateway(12345, 67890)
   end
 
   test "passcode_types returns correct type constants" do

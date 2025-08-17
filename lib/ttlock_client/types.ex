@@ -59,6 +59,12 @@ defmodule TTlockClient.Types do
     order_by: 1
   )
 
+  # Passcode delete request parameters record
+  Record.defrecord(:passcode_delete_params,
+    lock_id: nil,
+    keyboard_pwd_id: nil
+  )
+
   @type client_config :: record(:client_config,
           client_id: String.t(),
           client_secret: String.t(),
@@ -104,6 +110,11 @@ defmodule TTlockClient.Types do
           page_no: integer(),
           page_size: integer(),
           order_by: integer()
+        )
+
+  @type passcode_delete_params :: record(:passcode_delete_params,
+          lock_id: integer(),
+          keyboard_pwd_id: integer()
         )
 
   @type oauth_response :: %{
@@ -194,7 +205,12 @@ defmodule TTlockClient.Types do
           total: integer()
         }
 
-  @type passcode_api_result :: {:ok, passcode_add_response() | passcode_list_response()} | {:error, oauth_error() | atom()}
+  @type passcode_delete_response :: %{
+          errcode: integer(),
+          errmsg: String.t()
+        }
+
+  @type passcode_api_result :: {:ok, passcode_add_response() | passcode_list_response() | passcode_delete_response()} | {:error, oauth_error() | atom()}
 
   # Error codes
   @expired_token_error 10004
@@ -310,6 +326,21 @@ defmodule TTlockClient.Types do
       page_no: page_no,
       page_size: page_size,
       order_by: order_by
+    )
+  end
+
+  @doc """
+  Creates passcode delete request parameters.
+
+  ## Parameters
+    * `lock_id` - The lock ID containing the passcode
+    * `keyboard_pwd_id` - The passcode ID to delete
+  """
+  @spec new_passcode_delete_params(integer(), integer()) :: passcode_delete_params()
+  def new_passcode_delete_params(lock_id, keyboard_pwd_id) do
+    passcode_delete_params(
+      lock_id: lock_id,
+      keyboard_pwd_id: keyboard_pwd_id
     )
   end
 

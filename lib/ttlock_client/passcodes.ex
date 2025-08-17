@@ -32,20 +32,12 @@ defmodule TTlockClient.Passcodes do
       )
       {:ok, result} = TTlockClient.Passcodes.add_passcode(params)
 
-      # Add a temporary passcode (valid for 1 week)
-      start_time = DateTime.utc_now() |> DateTime.to_unix(:millisecond)
-      end_time = DateTime.add(DateTime.utc_now(), 7, :day) |> DateTime.to_unix(:millisecond)
-
-      params = TTlockClient.Types.new_passcode_add_params(
+      # Delete a passcode
+      delete_params = TTlockClient.Types.new_passcode_delete_params(
         12345,     # lock_id
-        987654,    # passcode
-        "Visitor", # name
-        3,         # period type
-        start_time,
-        end_time,
-        2          # via gateway
+        67890      # passcode_id
       )
-      {:ok, result} = TTlockClient.Passcodes.add_passcode(params)
+      {:ok, result} = TTlockClient.Passcodes.delete_passcode(delete_params)
   """
 
   require Logger
@@ -56,9 +48,11 @@ defmodule TTlockClient.Passcodes do
   @type passcode_api_result :: TTlockClient.Types.passcode_api_result()
   @type passcode_add_params :: TTlockClient.Types.passcode_add_params()
   @type passcode_list_params :: TTlockClient.Types.passcode_list_params()
+  @type passcode_delete_params :: TTlockClient.Types.passcode_delete_params()
 
   @passcode_add_endpoint "/v3/keyboardPwd/add"
   @passcode_list_endpoint "/v3/lock/listKeyboardPwd"
+  @passcode_delete_endpoint "/v3/keyboardPwd/delete"
   @request_timeout 30_000
 
   # Passcode type constants
@@ -162,6 +156,63 @@ defmodule TTlockClient.Passcodes do
 
     params = new_passcode_add_params(lock_id, passcode, name, @passcode_type_period, start_ms, end_ms, @add_type_gateway)
     add_passcode(params)
+  end
+
+  @doc """
+  Deletes a passcode from a lock via gateway.
+
+  This function deletes passcodes directly via the cloud API for WiFi locks
+  or locks connected to a gateway.
+
+  ## Parameters
+    * `params` - Passcode delete parameters containing lock ID and passcode ID
+
+  ## Examples
+      # Delete via gateway
+      delete_params = TTlockClient.Types.new_passcode_delete_params(
+        12345,  # lock_id
+        67890   # passcode_id
+      )
+      {:ok, result} = TTlockClient.Passcodes.delete_passcode(delete_params)
+
+  ## Returns
+    * `{:ok, passcode_delete_response}` - Success with status information
+    * `{:error, :not_authenticated}` - Authentication required
+    * `{:error, reason}` - API call failed
+  """
+  @spec delete_passcode(TTlockClient.Types.passcode_delete_params()) :: passcode_api_result()
+  def delete_passcode(passcode_delete_params() = params) do
+    lock_id = passcode_delete_params(params, :lock_id)
+    passcode_id = passcode_delete_params(params, :keyboard_pwd_id)
+
+    Logger.debug("Deleting passcode #{passcode_id} from lock ID: #{lock_id}")
+
+    with :ok <- validate_passcode_delete_params(params),
+         {:ok, auth_data} <- get_auth_data(),
+         {:ok, form_params} <- build_passcode_delete_params(params, auth_data),
+         {:ok, response} <- make_api_request(@passcode_delete_endpoint, form_params) do
+      Logger.info("Successfully deleted passcode #{passcode_id} from lock ID: #{lock_id}")
+      {:ok, parse_passcode_delete_response(response)}
+    end
+  end
+
+  @doc """
+  Convenience function to delete a passcode via gateway.
+
+  This is the recommended method for WiFi locks or locks connected to a gateway.
+  The passcode will be deleted directly via the cloud API.
+
+  ## Parameters
+    * `lock_id` - The lock ID containing the passcode
+    * `passcode_id` - The passcode ID to delete
+
+  ## Example
+      {:ok, result} = TTlockClient.Passcodes.delete_passcode_via_gateway(12345, 67890)
+  """
+  @spec delete_passcode_via_gateway(integer(), integer()) :: passcode_api_result()
+  def delete_passcode_via_gateway(lock_id, passcode_id) do
+    params = new_passcode_delete_params(lock_id, passcode_id)
+    delete_passcode(params)
   end
 
   @doc """
@@ -297,6 +348,23 @@ defmodule TTlockClient.Passcodes do
     end
   end
 
+  @spec validate_passcode_delete_params(passcode_delete_params()) :: :ok | {:error, term()}
+  defp validate_passcode_delete_params(params) do
+    lock_id = passcode_delete_params(params, :lock_id)
+    keyboard_pwd_id = passcode_delete_params(params, :keyboard_pwd_id)
+
+    cond do
+      not is_integer(lock_id) or lock_id <= 0 ->
+        {:error, {:validation_error, "lock_id must be a positive integer"}}
+
+      not is_integer(keyboard_pwd_id) or keyboard_pwd_id <= 0 ->
+        {:error, {:validation_error, "keyboard_pwd_id must be a positive integer"}}
+
+      true ->
+        :ok
+    end
+  end
+
   @spec get_auth_data() :: {:ok, {String.t(), String.t()}} | {:error, term()}
   defp get_auth_data do
     with {:ok, access_token} <- AuthManager.get_valid_token(),
@@ -339,6 +407,20 @@ defmodule TTlockClient.Passcodes do
       |> Enum.into(%{})
 
     form_params = Map.merge(base_params, optional_params)
+    {:ok, form_params}
+  end
+
+  @spec build_passcode_delete_params(TTlockClient.Types.passcode_delete_params(), {String.t(), String.t()}) :: {:ok, map()}
+  defp build_passcode_delete_params(params, {access_token, client_id}) do
+    form_params = %{
+      "clientId" => client_id,
+      "accessToken" => access_token,
+      "lockId" => passcode_delete_params(params, :lock_id),
+      "keyboardPwdId" => passcode_delete_params(params, :keyboard_pwd_id),
+      "deleteType" => 2,  # Always use gateway deletion
+      "date" => current_timestamp_ms()
+    }
+
     {:ok, form_params}
   end
 
@@ -445,6 +527,10 @@ defmodule TTlockClient.Passcodes do
         # List passcodes response
         {:ok, response}
 
+      {:ok, %{"errcode" => _} = response} ->
+        # Delete passcode response (and other simple responses)
+        {:ok, response}
+
       {:ok, parsed} ->
         {:error, {:invalid_response, parsed}}
 
@@ -478,6 +564,14 @@ defmodule TTlockClient.Passcodes do
   defp parse_passcode_add_response(response) do
     %{
       keyboardPwdId: response["keyboardPwdId"]
+    }
+  end
+
+  @spec parse_passcode_delete_response(map()) :: map()
+  defp parse_passcode_delete_response(response) do
+    %{
+      errcode: response["errcode"],
+      errmsg: response["errmsg"]
     }
   end
 

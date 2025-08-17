@@ -213,6 +213,8 @@ export TTLOCK_PASSWORD="your_password"
 - `add_permanent_passcode/2,3` - Add a permanent passcode via gateway
 - `add_temporary_passcode/4,5` - Add a time-limited passcode via gateway
 - `add_passcode/2,3,4,5,6,7,8` - Add passcode with full parameter control
+- `delete_passcode/2` - Delete a passcode via gateway
+- `delete_passcode_via_gateway/2` - Delete a passcode via gateway (alias)
 - `get_passcodes/1,2,3,4,5` - Get paginated list of passcodes for a lock
 - `get_lock_passcodes/1,2` - Get all passcodes for a lock (convenience function)
 - `search_passcodes/2` - Search passcodes by name or passcode value
@@ -222,6 +224,7 @@ export TTLOCK_PASSWORD="your_password"
 - `TTlockClient.Locks.get_lock_list/1` - Direct lock list API call
 - `TTlockClient.Locks.get_lock_detail/1` - Direct lock detail API call
 - `TTlockClient.Passcodes.add_passcode/1` - Direct passcode add API call
+- `TTlockClient.Passcodes.delete_passcode/1` - Direct passcode delete API call
 - `TTlockClient.Passcodes.get_passcode_list/1` - Direct passcode list API call
 - `TTlockClient.Types.*` - Type definitions and helper functions
 
@@ -230,6 +233,52 @@ export TTLOCK_PASSWORD="your_password"
 - `:not_configured` - No client credentials set
 - `:configured` - Client configured but not authenticated
 - `:authenticated` - Fully authenticated and ready
+
+## Passcode Management Examples
+
+### Adding Passcodes
+
+```elixir
+# Add a permanent passcode
+{:ok, %{keyboardPwdId: passcode_id}} = 
+  TTlockClient.add_permanent_passcode(12345, 123456, "Guest Access")
+
+# Add a temporary passcode (valid for 1 week)
+start_time = DateTime.utc_now()
+end_time = DateTime.add(start_time, 7, :day)
+{:ok, result} = 
+  TTlockClient.add_temporary_passcode(12345, 987654, start_time, end_time, "Week Access")
+
+# Add with full control over parameters
+{:ok, result} = 
+  TTlockClient.add_passcode(12345, 555999, "Custom", 3, start_ms, end_ms, 2)
+```
+
+### Deleting Passcodes
+
+```elixir
+# Delete a passcode (works for WiFi locks or locks connected to a gateway)
+{:ok, %{errcode: 0, errmsg: "success"}} = 
+  TTlockClient.delete_passcode(12345, 67890)
+
+# Alternative method (same functionality)
+{:ok, result} = TTlockClient.delete_passcode_via_gateway(12345, 67890)
+```
+
+**Note**: Passcode deletion works via the cloud API for WiFi locks or locks connected to a gateway. The passcode will be removed from both the cloud and the physical lock.
+
+### Listing and Searching Passcodes
+
+```elixir
+# Get all passcodes for a lock
+{:ok, %{list: passcodes, total: count}} = TTlockClient.get_lock_passcodes(12345)
+
+# Search for specific passcodes
+{:ok, results} = TTlockClient.search_passcodes(12345, "Guest")
+
+# Get paginated results with custom parameters
+{:ok, response} = TTlockClient.get_passcodes(12345, nil, 1, 50, 1)
+```
 
 ## Architecture
 
@@ -325,6 +374,9 @@ elixir passcodes_example.exs
 
 # Advanced passcode operations
 elixir passcodes_example.exs advanced
+
+# Passcode deletion examples
+elixir passcodes_example.exs delete
 
 # Passcode time helper examples
 elixir passcodes_example.exs helpers

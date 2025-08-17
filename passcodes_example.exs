@@ -8,6 +8,7 @@
 # Usage:
 #   elixir passcodes_example.exs           # Basic passcode operations
 #   elixir passcodes_example.exs advanced  # Advanced passcode examples
+#   elixir passcodes_example.exs delete    # Passcode deletion examples
 
 defmodule PasscodesExample do
   @moduledoc """
@@ -210,6 +211,182 @@ defmodule PasscodesExample do
   end
 end
 
+defmodule PasscodeDeletionExample do
+  @moduledoc """
+  Example showing passcode deletion operations.
+  """
+
+  require Logger
+
+  def run do
+    Logger.info("Starting TTlockClient Passcode Deletion example")
+
+    case TTlockClient.start_with_env() do
+      :ok ->
+        Logger.info("✓ Authentication successful")
+        demonstrate_deletion_operations()
+
+      {:error, {:missing_env_var, var_name}} ->
+        Logger.error("✗ Missing environment variable: #{var_name}")
+        Logger.info("Please set #{var_name} in your .env file")
+
+      {:error, reason} ->
+        Logger.error("✗ Authentication failed: #{inspect(reason)}")
+        exit(:authentication_failed)
+    end
+  end
+
+  defp demonstrate_deletion_operations do
+    Logger.info("Demonstrating passcode deletion operations...")
+
+    case get_first_lock() do
+      {:ok, lock_id} ->
+        Logger.info("Using lock ID: #{lock_id}")
+
+        # First, add some test passcodes to delete
+        test_passcode_ids = add_test_passcodes(lock_id)
+
+        if length(test_passcode_ids) > 0 do
+          # Demonstrate different deletion methods
+          demonstrate_gateway_deletion(lock_id, test_passcode_ids)
+          demonstrate_using_types_module(lock_id, test_passcode_ids)
+          list_remaining_passcodes(lock_id)
+        else
+          Logger.info("No test passcodes were created, skipping deletion examples")
+        end
+
+      {:error, reason} ->
+        Logger.error("✗ Could not get a lock to work with: #{inspect(reason)}")
+        Logger.info("Make sure you have at least one lock in your account")
+    end
+  end
+
+  defp get_first_lock do
+    case TTlockClient.get_locks(1, 1) do
+      {:ok, %{list: [first_lock | _]}} ->
+        {:ok, first_lock["lockId"]}
+
+      {:ok, %{list: []}} ->
+        {:error, :no_locks_found}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  defp add_test_passcodes(lock_id) do
+    Logger.info("Adding test passcodes for deletion examples...")
+
+    test_passcodes = [
+      {111111, "Test Delete 1"},
+      {222222, "Test Delete 2"},
+      {333333, "Test Delete 3"}
+    ]
+
+    Enum.reduce(test_passcodes, [], fn {passcode, name}, acc ->
+      case TTlockClient.add_permanent_passcode(lock_id, passcode, name) do
+        {:ok, %{keyboardPwdId: passcode_id}} ->
+          Logger.info("✓ Added test passcode: #{name} (ID: #{passcode_id})")
+          [passcode_id | acc]
+
+        {:error, reason} ->
+          Logger.warning("⚠️  Failed to add test passcode #{name}: #{inspect(reason)}")
+          acc
+      end
+    end)
+    |> Enum.reverse()
+  end
+
+  defp demonstrate_gateway_deletion(lock_id, [first_passcode_id | rest]) do
+    Logger.info("Demonstrating passcode deletion via gateway...")
+
+    case TTlockClient.delete_passcode_via_gateway(lock_id, first_passcode_id) do
+      {:ok, %{errcode: 0, errmsg: message}} ->
+        Logger.info("✓ Successfully deleted passcode via gateway!")
+        Logger.info("  Passcode ID: #{first_passcode_id}")
+        Logger.info("  Method: Gateway/WiFi")
+        Logger.info("  Response: #{message}")
+
+      {:ok, %{errcode: error_code, errmsg: error_message}} ->
+        Logger.error("✗ Gateway deletion failed with error #{error_code}: #{error_message}")
+
+      {:error, reason} ->
+        Logger.error("✗ Failed to delete passcode via gateway: #{inspect(reason)}")
+    end
+
+    rest
+  end
+
+  defp demonstrate_gateway_deletion(_lock_id, []) do
+    Logger.info("No passcode IDs available for gateway deletion example")
+    []
+  end
+
+  defp demonstrate_using_types_module(lock_id, [second_passcode_id | rest]) do
+    Logger.info("Using Types module for advanced deletion control...")
+
+    # Create delete parameters using the Types module
+    delete_params = TTlockClient.Types.new_passcode_delete_params(
+      lock_id,
+      second_passcode_id
+    )
+
+    Logger.info("Created delete parameters:")
+    Logger.info("  Lock ID: #{TTlockClient.Types.passcode_delete_params(delete_params, :lock_id)}")
+    Logger.info("  Passcode ID: #{TTlockClient.Types.passcode_delete_params(delete_params, :keyboard_pwd_id)}")
+
+    case TTlockClient.Passcodes.delete_passcode(delete_params) do
+      {:ok, %{errcode: 0, errmsg: message}} ->
+        Logger.info("✓ Successfully deleted passcode using Types module!")
+        Logger.info("  Response: #{message}")
+
+      {:ok, %{errcode: error_code, errmsg: error_message}} ->
+        Logger.error("✗ Types module deletion failed with error #{error_code}: #{error_message}")
+
+      {:error, reason} ->
+        Logger.error("✗ Failed to delete passcode using Types module: #{inspect(reason)}")
+    end
+
+    rest
+  end
+
+  defp demonstrate_using_types_module(_lock_id, []) do
+    Logger.info("No passcode IDs available for Types module deletion example")
+    []
+  end
+
+  defp list_remaining_passcodes(lock_id) do
+    Logger.info("Listing remaining test passcodes...")
+
+    case TTlockClient.search_passcodes(lock_id, "Test Delete") do
+      {:ok, %{list: results, total: total}} ->
+        Logger.info("✓ Found #{total} remaining test passcode(s)")
+
+        if total > 0 do
+          Logger.info("Remaining test passcodes:")
+          Enum.each(results, fn passcode ->
+            name = passcode["keyboardPwdName"]
+            pwd = passcode["keyboardPwd"]
+            id = passcode["keyboardPwdId"]
+            Logger.info("  - #{name} (#{pwd}) - ID: #{id}")
+          end)
+
+          Logger.info("")
+          Logger.info("You can delete these manually using:")
+          Enum.each(results, fn passcode ->
+            id = passcode["keyboardPwdId"]
+            Logger.info("  TTlockClient.delete_passcode(#{lock_id}, #{id})")
+          end)
+        else
+          Logger.info("All test passcodes have been deleted successfully!")
+        end
+
+      {:error, reason} ->
+        Logger.error("✗ Failed to search for remaining test passcodes: #{inspect(reason)}")
+    end
+  end
+end
+
 defmodule AdvancedPasscodesExample do
   @moduledoc """
   Advanced example showing passcode management patterns and best practices.
@@ -294,9 +471,22 @@ defmodule AdvancedPasscodesExample do
 
     case TTlockClient.Passcodes.add_passcode(invalid_params) do
       {:error, {:validation_error, message}} ->
-        Logger.info("✓ Validation caught error: #{message}")
+        Logger.info("✓ Add validation caught error: #{message}")
       other ->
-        Logger.info("Unexpected result: #{inspect(other)}")
+        Logger.info("Unexpected add result: #{inspect(other)}")
+    end
+
+    # Test delete validation
+    invalid_delete_params = TTlockClient.Types.new_passcode_delete_params(
+      -1,  # invalid lock_id
+      -1   # invalid passcode_id
+    )
+
+    case TTlockClient.Passcodes.delete_passcode(invalid_delete_params) do
+      {:error, {:validation_error, message}} ->
+        Logger.info("✓ Delete validation caught error: #{message}")
+      other ->
+        Logger.info("Unexpected delete result: #{inspect(other)}")
     end
   end
 
@@ -317,7 +507,7 @@ defmodule AdvancedPasscodesExample do
       2   # gateway type
     )
 
-    Logger.info("Created parameters:")
+    Logger.info("Created add parameters:")
     Logger.info("  Lock ID: #{TTlockClient.Types.passcode_add_params(params, :lock_id)}")
     Logger.info("  Passcode: #{TTlockClient.Types.passcode_add_params(params, :keyboard_pwd)}")
     Logger.info("  Name: #{TTlockClient.Types.passcode_add_params(params, :keyboard_pwd_name)}")
@@ -425,6 +615,8 @@ end
 case System.argv() do
   ["advanced"] ->
     AdvancedPasscodesExample.run()
+  ["delete"] ->
+    PasscodeDeletionExample.run()
   ["helpers"] ->
     # Example using helper functions
     IO.puts("Time helper examples:")
