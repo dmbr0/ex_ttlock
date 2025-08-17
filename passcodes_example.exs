@@ -1,0 +1,328 @@
+#!/usr/bin/env elixir
+
+# TTlockClient Passcodes API Usage Example
+#
+# This example demonstrates how to use the passcode management features
+# of the TTlockClient library.
+#
+# Usage:
+#   elixir passcodes_example.exs           # Basic passcode operations
+#   elixir passcodes_example.exs advanced  # Advanced passcode examples
+
+defmodule PasscodesExample do
+  @moduledoc """
+  Example usage of TTlockClient passcode management features.
+  """
+
+  require Logger
+
+  def run do
+    Logger.info("Starting TTlockClient Passcodes API example")
+
+    # First, authenticate (required for passcode API calls)
+    case TTlockClient.start_with_env() do
+      :ok ->
+        Logger.info("✓ Authentication successful")
+        demonstrate_passcode_operations()
+
+      {:error, {:missing_env_var, var_name}} ->
+        Logger.error("✗ Missing environment variable: #{var_name}")
+        Logger.info("Please set #{var_name} in your .env file")
+
+      {:error, reason} ->
+        Logger.error("✗ Authentication failed: #{inspect(reason)}")
+        exit(:authentication_failed)
+    end
+  end
+
+  defp demonstrate_passcode_operations do
+    Logger.info("Demonstrating passcode operations...")
+
+    # First, get a lock to work with
+    case get_first_lock() do
+      {:ok, lock_id} ->
+        Logger.info("Using lock ID: #{lock_id}")
+
+        # Demonstrate different types of passcodes
+        add_permanent_passcode_example(lock_id)
+        add_temporary_passcode_example(lock_id)
+        add_custom_passcode_example(lock_id)
+
+      {:error, reason} ->
+        Logger.error("✗ Could not get a lock to work with: #{inspect(reason)}")
+        Logger.info("Make sure you have at least one lock in your account")
+    end
+  end
+
+  defp get_first_lock do
+    case TTlockClient.get_locks(1, 1) do
+      {:ok, %{list: [first_lock | _]}} ->
+        {:ok, first_lock["lockId"]}
+
+      {:ok, %{list: []}} ->
+        {:error, :no_locks_found}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  defp add_permanent_passcode_example(lock_id) do
+    Logger.info("Adding a permanent passcode...")
+
+    # Generate a random 6-digit passcode
+    passcode = Enum.random(100_000..999_999)
+
+    case TTlockClient.add_permanent_passcode(lock_id, passcode, "Guest Access") do
+      {:ok, %{keyboardPwdId: passcode_id}} ->
+        Logger.info("✓ Permanent passcode added successfully!")
+        Logger.info("  Passcode ID: #{passcode_id}")
+        Logger.info("  Passcode: #{passcode}")
+        Logger.info("  Name: Guest Access")
+        Logger.info("  Type: Permanent (never expires)")
+
+      {:error, %{error_code: -3009}} ->
+        Logger.warning("⚠️  Lock passcode storage is full (250 passcode limit)")
+
+      {:error, reason} ->
+        Logger.error("✗ Failed to add permanent passcode: #{inspect(reason)}")
+    end
+  end
+
+  defp add_temporary_passcode_example(lock_id) do
+    Logger.info("Adding a temporary passcode (valid for 1 week)...")
+
+    # Generate a random 6-digit passcode
+    passcode = Enum.random(100_000..999_999)
+
+    # Set up dates for 1 week from now
+    start_time = DateTime.utc_now()
+    end_time = DateTime.add(start_time, 7, :day)
+
+    case TTlockClient.add_temporary_passcode(lock_id, passcode, start_time, end_time, "Weekly Visitor") do
+      {:ok, %{keyboardPwdId: passcode_id}} ->
+        Logger.info("✓ Temporary passcode added successfully!")
+        Logger.info("  Passcode ID: #{passcode_id}")
+        Logger.info("  Passcode: #{passcode}")
+        Logger.info("  Name: Weekly Visitor")
+        Logger.info("  Valid from: #{DateTime.to_string(start_time)}")
+        Logger.info("  Valid until: #{DateTime.to_string(end_time)}")
+
+      {:error, %{error_code: -3009}} ->
+        Logger.warning("⚠️  Lock passcode storage is full (250 passcode limit)")
+
+      {:error, reason} ->
+        Logger.error("✗ Failed to add temporary passcode: #{inspect(reason)}")
+    end
+  end
+
+  defp add_custom_passcode_example(lock_id) do
+    Logger.info("Adding a custom passcode with specific parameters...")
+
+    # Generate a random 4-digit passcode
+    passcode = Enum.random(1000..9999)
+
+    # Set up for a passcode valid for 24 hours starting in 1 hour
+    start_time = DateTime.add(DateTime.utc_now(), 1, :hour)
+    end_time = DateTime.add(start_time, 24, :hour)
+
+    start_ms = DateTime.to_unix(start_time, :millisecond)
+    end_ms = DateTime.to_unix(end_time, :millisecond)
+
+    # Add via gateway (addType 2) as a period passcode (type 3)
+    case TTlockClient.add_passcode(lock_id, passcode, "24h Delivery", 3, start_ms, end_ms, 2) do
+      {:ok, %{keyboardPwdId: passcode_id}} ->
+        Logger.info("✓ Custom passcode added successfully!")
+        Logger.info("  Passcode ID: #{passcode_id}")
+        Logger.info("  Passcode: #{passcode}")
+        Logger.info("  Name: 24h Delivery")
+        Logger.info("  Activation: #{DateTime.to_string(start_time)}")
+        Logger.info("  Expiration: #{DateTime.to_string(end_time)}")
+        Logger.info("  Add method: Gateway/WiFi")
+
+      {:error, %{error_code: -3009}} ->
+        Logger.warning("⚠️  Lock passcode storage is full (250 passcode limit)")
+
+      {:error, reason} ->
+        Logger.error("✗ Failed to add custom passcode: #{inspect(reason)}")
+    end
+  end
+end
+
+defmodule AdvancedPasscodesExample do
+  @moduledoc """
+  Advanced example showing passcode management patterns and best practices.
+  """
+
+  require Logger
+
+  def run do
+    Logger.info("Starting advanced passcodes example")
+
+    case TTlockClient.start_with_env() do
+      :ok ->
+        demonstrate_advanced_patterns()
+
+      {:error, reason} ->
+        Logger.error("Authentication failed: #{inspect(reason)}")
+        exit(:authentication_failed)
+    end
+  end
+
+  defp demonstrate_advanced_patterns do
+    case get_lock_for_demo() do
+      {:ok, lock_id} ->
+        Logger.info("Using lock ID: #{lock_id} for advanced examples")
+
+        show_passcode_types()
+        show_add_types()
+        demonstrate_validation()
+        demonstrate_using_types_module(lock_id)
+
+      {:error, reason} ->
+        Logger.error("Could not get lock: #{inspect(reason)}")
+    end
+  end
+
+  defp get_lock_for_demo do
+    case TTlockClient.get_locks() do
+      {:ok, %{list: [first_lock | _]}} ->
+        {:ok, first_lock["lockId"]}
+      _ ->
+        {:error, :no_locks}
+    end
+  end
+
+  defp show_passcode_types do
+    Logger.info("Available passcode types:")
+    types = TTlockClient.Passcodes.passcode_types()
+    Logger.info("  Permanent: #{types.permanent}")
+    Logger.info("  Period: #{types.period}")
+  end
+
+  defp show_add_types do
+    Logger.info("Available add types:")
+    types = TTlockClient.Passcodes.add_types()
+    Logger.info("  Bluetooth: #{types.bluetooth} (use mobile app first, then sync)")
+    Logger.info("  Gateway: #{types.gateway} (direct via gateway or WiFi lock)")
+  end
+
+  defp demonstrate_validation do
+    Logger.info("Demonstrating parameter validation...")
+
+    # This will show validation errors
+    invalid_params = TTlockClient.Types.new_passcode_add_params(
+      -1,      # invalid lock_id
+      123,     # too short passcode
+      "Test",
+      3,       # period type
+      nil,     # missing start_date
+      nil,     # missing end_date
+      2
+    )
+
+    case TTlockClient.Passcodes.add_passcode(invalid_params) do
+      {:error, {:validation_error, message}} ->
+        Logger.info("✓ Validation caught error: #{message}")
+      other ->
+        Logger.info("Unexpected result: #{inspect(other)}")
+    end
+  end
+
+  defp demonstrate_using_types_module(lock_id) do
+    Logger.info("Using Types module for advanced parameter control...")
+
+    # Create parameters using the Types module
+    start_time = DateTime.add(DateTime.utc_now(), 2, :hour)
+    end_time = DateTime.add(start_time, 6, :hour)
+
+    params = TTlockClient.Types.new_passcode_add_params(
+      lock_id,
+      555666,  # passcode
+      "Service Window",  # name
+      3,  # period type
+      DateTime.to_unix(start_time, :millisecond),
+      DateTime.to_unix(end_time, :millisecond),
+      2   # gateway type
+    )
+
+    Logger.info("Created parameters:")
+    Logger.info("  Lock ID: #{TTlockClient.Types.passcode_add_params(params, :lock_id)}")
+    Logger.info("  Passcode: #{TTlockClient.Types.passcode_add_params(params, :keyboard_pwd)}")
+    Logger.info("  Name: #{TTlockClient.Types.passcode_add_params(params, :keyboard_pwd_name)}")
+    Logger.info("  Type: #{TTlockClient.Types.passcode_add_params(params, :keyboard_pwd_type)}")
+    Logger.info("  Add Type: #{TTlockClient.Types.passcode_add_params(params, :add_type)}")
+
+    case TTlockClient.Passcodes.add_passcode(params) do
+      {:ok, result} ->
+        Logger.info("✓ Advanced passcode added: #{inspect(result)}")
+      {:error, reason} ->
+        Logger.info("Could not add passcode (expected): #{inspect(reason)}")
+    end
+  end
+end
+
+# Helper functions for time management
+defmodule PasscodeTimeHelpers do
+  @moduledoc """
+  Utility functions for working with passcode time periods.
+  """
+
+  @doc """
+  Creates a passcode valid for a specific number of hours from now.
+  """
+  def hours_from_now(lock_id, passcode, hours, name \\ nil) do
+    start_time = DateTime.utc_now()
+    end_time = DateTime.add(start_time, hours, :hour)
+
+    TTlockClient.add_temporary_passcode(lock_id, passcode, start_time, end_time, name)
+  end
+
+  @doc """
+  Creates a passcode valid for business hours today.
+  """
+  def business_hours_today(lock_id, passcode, name \\ nil) do
+    now = DateTime.utc_now()
+
+    # 9 AM today
+    start_time = %{now | hour: 9, minute: 0, second: 0, microsecond: {0, 0}}
+
+    # 5 PM today
+    end_time = %{now | hour: 17, minute: 0, second: 0, microsecond: {0, 0}}
+
+    TTlockClient.add_temporary_passcode(lock_id, passcode, start_time, end_time, name)
+  end
+
+  @doc """
+  Creates a passcode valid for a weekend (Saturday and Sunday).
+  """
+  def weekend_passcode(lock_id, passcode, name \\ nil) do
+    now = DateTime.utc_now()
+
+    # Find next Saturday
+    days_until_saturday = rem(7 - Date.day_of_week(DateTime.to_date(now)), 7)
+    saturday = DateTime.add(now, days_until_saturday, :day)
+
+    # Saturday at midnight
+    start_time = %{saturday | hour: 0, minute: 0, second: 0, microsecond: {0, 0}}
+
+    # Monday at midnight (end of Sunday)
+    end_time = DateTime.add(start_time, 2, :day)
+
+    TTlockClient.add_temporary_passcode(lock_id, passcode, start_time, end_time, name)
+  end
+end
+
+# Run the appropriate example based on command line arguments
+case System.argv() do
+  ["advanced"] ->
+    AdvancedPasscodesExample.run()
+  ["helpers"] ->
+    # Example using helper functions
+    IO.puts("Time helper examples:")
+    IO.puts("PasscodeTimeHelpers.hours_from_now(12345, 123456, 24, \"24h Access\")")
+    IO.puts("PasscodeTimeHelpers.business_hours_today(12345, 987654, \"Office Access\")")
+    IO.puts("PasscodeTimeHelpers.weekend_passcode(12345, 555888, \"Weekend Guest\")")
+  _ ->
+    PasscodesExample.run()
+end

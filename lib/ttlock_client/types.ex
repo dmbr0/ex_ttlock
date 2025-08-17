@@ -39,6 +39,17 @@ defmodule TTlockClient.Types do
     lock_id: nil
   )
 
+  # Passcode add request parameters record
+  Record.defrecord(:passcode_add_params,
+    lock_id: nil,
+    keyboard_pwd: nil,
+    keyboard_pwd_name: nil,
+    keyboard_pwd_type: 3,
+    start_date: nil,
+    end_date: nil,
+    add_type: 1
+  )
+
   @type client_config :: record(:client_config,
           client_id: String.t(),
           client_secret: String.t(),
@@ -66,6 +77,16 @@ defmodule TTlockClient.Types do
 
   @type lock_detail_params :: record(:lock_detail_params,
           lock_id: integer()
+        )
+
+  @type passcode_add_params :: record(:passcode_add_params,
+          lock_id: integer(),
+          keyboard_pwd: integer(),
+          keyboard_pwd_name: String.t() | nil,
+          keyboard_pwd_type: integer(),
+          start_date: integer() | nil,
+          end_date: integer() | nil,
+          add_type: integer()
         )
 
   @type oauth_response :: %{
@@ -129,6 +150,13 @@ defmodule TTlockClient.Types do
         }
 
   @type lock_api_result :: {:ok, lock_list_response() | lock_detail_response()} | {:error, oauth_error() | atom()}
+
+  # Passcode API response types
+  @type passcode_add_response :: %{
+          keyboardPwdId: integer()
+        }
+
+  @type passcode_api_result :: {:ok, passcode_add_response()} | {:error, oauth_error() | atom()}
 
   # Error codes
   @expired_token_error 10004
@@ -199,6 +227,31 @@ defmodule TTlockClient.Types do
   @spec new_lock_detail_params(integer()) :: lock_detail_params()
   def new_lock_detail_params(lock_id) do
     lock_detail_params(lock_id: lock_id)
+  end
+
+  @doc """
+  Creates passcode add request parameters.
+
+  ## Parameters
+    * `lock_id` - The lock ID to add the passcode to
+    * `keyboard_pwd` - The passcode (4-9 digits)
+    * `keyboard_pwd_name` - Optional name/alias for the passcode
+    * `keyboard_pwd_type` - Passcode type: 2 = permanent, 3 = period (default 3)
+    * `start_date` - Start time in milliseconds (required if type = 3)
+    * `end_date` - End time in milliseconds (required if type = 3)
+    * `add_type` - Add method: 1 = Bluetooth, 2 = Gateway/WiFi (default 1)
+  """
+  @spec new_passcode_add_params(integer(), integer(), String.t() | nil, integer(), integer() | nil, integer() | nil, integer()) :: passcode_add_params()
+  def new_passcode_add_params(lock_id, keyboard_pwd, keyboard_pwd_name \\ nil, keyboard_pwd_type \\ 3, start_date \\ nil, end_date \\ nil, add_type \\ 1) do
+    passcode_add_params(
+      lock_id: lock_id,
+      keyboard_pwd: keyboard_pwd,
+      keyboard_pwd_name: keyboard_pwd_name,
+      keyboard_pwd_type: keyboard_pwd_type,
+      start_date: start_date,
+      end_date: end_date,
+      add_type: add_type
+    )
   end
 
   @doc """

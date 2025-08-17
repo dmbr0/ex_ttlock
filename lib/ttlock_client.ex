@@ -45,6 +45,7 @@ defmodule TTlockClient do
 
   alias TTlockClient.AuthManager
   alias TTlockClient.Locks
+  alias TTlockClient.Passcodes
 
   @doc """
   Configures the TTLock client with your application credentials.
@@ -348,5 +349,85 @@ defmodule TTlockClient do
   @spec get_all_locks(String.t() | nil, integer() | nil) :: {:ok, [map()]} | {:error, term()}
   def get_all_locks(lock_alias \\ nil, group_id \\ nil) do
     Locks.get_all_locks(100, lock_alias, group_id)
+  end
+
+  # Passcode Management Functions
+
+  @doc """
+  Adds a permanent passcode to a lock via gateway.
+
+  ## Parameters
+    * `lock_id` - The lock ID to add the passcode to
+    * `passcode` - The 4-9 digit passcode
+    * `name` - Optional name/alias for the passcode
+
+  ## Examples
+      {:ok, %{keyboardPwdId: passcode_id}} = TTlockClient.add_permanent_passcode(12345, 123456, "Guest")
+
+  ## Returns
+    * `{:ok, response}` - Contains keyboardPwdId
+    * `{:error, reason}` - Request failed
+  """
+  @spec add_permanent_passcode(integer(), integer(), String.t() | nil) ::
+    {:ok, map()} | {:error, term()}
+  def add_permanent_passcode(lock_id, passcode, name \\ nil) do
+    Passcodes.add_permanent_passcode(lock_id, passcode, name)
+  end
+
+  @doc """
+  Adds a temporary passcode to a lock via gateway.
+
+  ## Parameters
+    * `lock_id` - The lock ID to add the passcode to
+    * `passcode` - The 4-9 digit passcode
+    * `start_date` - Start time (DateTime or milliseconds)
+    * `end_date` - End time (DateTime or milliseconds)
+    * `name` - Optional name/alias for the passcode
+
+  ## Examples
+      start_time = DateTime.utc_now()
+      end_time = DateTime.add(start_time, 7, :day)
+      {:ok, result} = TTlockClient.add_temporary_passcode(12345, 987654, start_time, end_time, "Week Access")
+
+  ## Returns
+    * `{:ok, response}` - Contains keyboardPwdId
+    * `{:error, reason}` - Request failed
+  """
+  @spec add_temporary_passcode(integer(), integer(), DateTime.t() | integer(), DateTime.t() | integer(), String.t() | nil) ::
+    {:ok, map()} | {:error, term()}
+  def add_temporary_passcode(lock_id, passcode, start_date, end_date, name \\ nil) do
+    Passcodes.add_temporary_passcode(lock_id, passcode, start_date, end_date, name)
+  end
+
+  @doc """
+  Adds a custom passcode with full control over parameters.
+
+  ## Parameters
+    * `lock_id` - The lock ID to add the passcode to
+    * `passcode` - The 4-9 digit passcode
+    * `name` - Optional name/alias for the passcode
+    * `passcode_type` - 2 = permanent, 3 = period
+    * `start_date` - Start time in milliseconds (required for period type)
+    * `end_date` - End time in milliseconds (required for period type)
+    * `add_type` - 1 = Bluetooth, 2 = Gateway/WiFi
+
+  ## Examples
+      # Permanent passcode via gateway
+      {:ok, result} = TTlockClient.add_passcode(12345, 123456, "Guest", 2, nil, nil, 2)
+
+      # Temporary passcode via Bluetooth (requires mobile app first)
+      start_ms = DateTime.utc_now() |> DateTime.to_unix(:millisecond)
+      end_ms = DateTime.add(DateTime.utc_now(), 7, :day) |> DateTime.to_unix(:millisecond)
+      {:ok, result} = TTlockClient.add_passcode(12345, 555999, "Visitor", 3, start_ms, end_ms, 1)
+
+  ## Returns
+    * `{:ok, response}` - Contains keyboardPwdId
+    * `{:error, reason}` - Request failed
+  """
+  @spec add_passcode(integer(), integer(), String.t() | nil, integer(), integer() | nil, integer() | nil, integer()) ::
+    {:ok, map()} | {:error, term()}
+  def add_passcode(lock_id, passcode, name \\ nil, passcode_type \\ 3, start_date \\ nil, end_date \\ nil, add_type \\ 2) do
+    params = TTlockClient.Types.new_passcode_add_params(lock_id, passcode, name, passcode_type, start_date, end_date, add_type)
+    Passcodes.add_passcode(params)
   end
 end

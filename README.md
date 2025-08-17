@@ -208,10 +208,17 @@ export TTLOCK_PASSWORD="your_password"
 - `get_lock/1` - Get detailed information about a specific lock
 - `get_all_locks/0,1,2` - Get all locks (handles pagination automatically)
 
+### Passcode Management
+
+- `add_permanent_passcode/2,3` - Add a permanent passcode via gateway
+- `add_temporary_passcode/4,5` - Add a time-limited passcode via gateway
+- `add_passcode/2,3,4,5,6,7,8` - Add passcode with full parameter control
+
 ### Low-Level API
 
 - `TTlockClient.Locks.get_lock_list/1` - Direct lock list API call
 - `TTlockClient.Locks.get_lock_detail/1` - Direct lock detail API call
+- `TTlockClient.Passcodes.add_passcode/1` - Direct passcode add API call
 - `TTlockClient.Types.*` - Type definitions and helper functions
 
 ### Authentication States
@@ -308,6 +315,15 @@ elixir locks_example.exs
 
 # Advanced lock operations
 elixir locks_example.exs detail
+
+# Passcode management examples
+elixir passcodes_example.exs
+
+# Advanced passcode operations
+elixir passcodes_example.exs advanced
+
+# Passcode time helper examples
+elixir passcodes_example.exs helpers
 ```
 
 ## Contributing
