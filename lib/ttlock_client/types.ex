@@ -76,67 +76,76 @@ defmodule TTlockClient.Types do
     change_type: 2
   )
 
-  @type client_config :: record(:client_config,
-          client_id: String.t(),
-          client_secret: String.t(),
-          base_url: String.t()
-        )
+  @type client_config ::
+          record(:client_config,
+            client_id: String.t(),
+            client_secret: String.t(),
+            base_url: String.t()
+          )
 
-  @type token_info :: record(:token_info,
-          access_token: String.t() | nil,
-          refresh_token: String.t() | nil,
-          expires_at: DateTime.t() | nil,
-          uid: integer() | nil
-        )
+  @type token_info ::
+          record(:token_info,
+            access_token: String.t() | nil,
+            refresh_token: String.t() | nil,
+            expires_at: DateTime.t() | nil,
+            uid: integer() | nil
+          )
 
-  @type auth_credentials :: record(:auth_credentials,
-          username: String.t(),
-          password_hash: String.t()
-        )
+  @type auth_credentials ::
+          record(:auth_credentials,
+            username: String.t(),
+            password_hash: String.t()
+          )
 
-  @type lock_list_params :: record(:lock_list_params,
-          page_no: integer(),
-          page_size: integer(),
-          lock_alias: String.t() | nil,
-          group_id: integer() | nil
-        )
+  @type lock_list_params ::
+          record(:lock_list_params,
+            page_no: integer(),
+            page_size: integer(),
+            lock_alias: String.t() | nil,
+            group_id: integer() | nil
+          )
 
-  @type lock_detail_params :: record(:lock_detail_params,
-          lock_id: integer()
-        )
+  @type lock_detail_params ::
+          record(:lock_detail_params,
+            lock_id: integer()
+          )
 
-  @type passcode_add_params :: record(:passcode_add_params,
-          lock_id: integer(),
-          keyboard_pwd: integer(),
-          keyboard_pwd_name: String.t() | nil,
-          keyboard_pwd_type: integer(),
-          start_date: integer() | nil,
-          end_date: integer() | nil,
-          add_type: integer()
-        )
+  @type passcode_add_params ::
+          record(:passcode_add_params,
+            lock_id: integer(),
+            keyboard_pwd: integer(),
+            keyboard_pwd_name: String.t() | nil,
+            keyboard_pwd_type: integer(),
+            start_date: integer() | nil,
+            end_date: integer() | nil,
+            add_type: integer()
+          )
 
-  @type passcode_list_params :: record(:passcode_list_params,
-          lock_id: integer(),
-          search_str: String.t() | nil,
-          page_no: integer(),
-          page_size: integer(),
-          order_by: integer()
-        )
+  @type passcode_list_params ::
+          record(:passcode_list_params,
+            lock_id: integer(),
+            search_str: String.t() | nil,
+            page_no: integer(),
+            page_size: integer(),
+            order_by: integer()
+          )
 
-  @type passcode_delete_params :: record(:passcode_delete_params,
-          lock_id: integer(),
-          keyboard_pwd_id: integer()
-        )
+  @type passcode_delete_params ::
+          record(:passcode_delete_params,
+            lock_id: integer(),
+            keyboard_pwd_id: integer()
+          )
 
-  @type passcode_change_params :: record(:passcode_change_params,
-          lock_id: integer(),
-          keyboard_pwd_id: integer(),
-          keyboard_pwd_name: String.t() | nil,
-          new_keyboard_pwd: integer() | nil,
-          start_date: integer() | nil,
-          end_date: integer() | nil,
-          change_type: integer()
-        )
+  @type passcode_change_params ::
+          record(:passcode_change_params,
+            lock_id: integer(),
+            keyboard_pwd_id: integer(),
+            keyboard_pwd_name: String.t() | nil,
+            new_keyboard_pwd: integer() | nil,
+            start_date: integer() | nil,
+            end_date: integer() | nil,
+            change_type: integer()
+          )
 
   @type oauth_response :: %{
           access_token: String.t(),
@@ -198,7 +207,8 @@ defmodule TTlockClient.Types do
           date: integer()
         }
 
-  @type lock_api_result :: {:ok, lock_list_response() | lock_detail_response()} | {:error, oauth_error() | atom()}
+  @type lock_api_result ::
+          {:ok, lock_list_response() | lock_detail_response()} | {:error, oauth_error() | atom()}
 
   # Passcode API response types
   @type passcode_add_response :: %{
@@ -236,7 +246,13 @@ defmodule TTlockClient.Types do
           errmsg: String.t()
         }
 
-  @type passcode_api_result :: {:ok, passcode_add_response() | passcode_list_response() | passcode_delete_response() | passcode_change_response()} | {:error, oauth_error() | atom()}
+  @type passcode_api_result ::
+          {:ok,
+           passcode_add_response()
+           | passcode_list_response()
+           | passcode_delete_response()
+           | passcode_change_response()}
+          | {:error, oauth_error() | atom()}
 
   # Error codes
   @expired_token_error 10004
@@ -291,7 +307,8 @@ defmodule TTlockClient.Types do
   @doc """
   Creates lock list request parameters.
   """
-  @spec new_lock_list_params(integer(), integer(), String.t() | nil, integer() | nil) :: lock_list_params()
+  @spec new_lock_list_params(integer(), integer(), String.t() | nil, integer() | nil) ::
+          lock_list_params()
   def new_lock_list_params(page_no \\ 1, page_size \\ 20, lock_alias \\ nil, group_id \\ nil) do
     lock_list_params(
       page_no: page_no,
@@ -321,8 +338,24 @@ defmodule TTlockClient.Types do
     * `end_date` - End time in milliseconds (required if type = 3)
     * `add_type` - Add method: 1 = Bluetooth, 2 = Gateway/WiFi (default 1)
   """
-  @spec new_passcode_add_params(integer(), integer(), String.t() | nil, integer(), integer() | nil, integer() | nil, integer()) :: passcode_add_params()
-  def new_passcode_add_params(lock_id, keyboard_pwd, keyboard_pwd_name \\ nil, keyboard_pwd_type \\ 3, start_date \\ nil, end_date \\ nil, add_type \\ 1) do
+  @spec new_passcode_add_params(
+          integer(),
+          integer(),
+          String.t() | nil,
+          integer(),
+          integer() | nil,
+          integer() | nil,
+          integer()
+        ) :: passcode_add_params()
+  def new_passcode_add_params(
+        lock_id,
+        keyboard_pwd,
+        keyboard_pwd_name \\ nil,
+        keyboard_pwd_type \\ 3,
+        start_date \\ nil,
+        end_date \\ nil,
+        add_type \\ 1
+      ) do
     passcode_add_params(
       lock_id: lock_id,
       keyboard_pwd: keyboard_pwd,
@@ -344,8 +377,15 @@ defmodule TTlockClient.Types do
     * `page_size` - Items per page (default 20, max 200)
     * `order_by` - Sorting: 0 = by name, 1 = reverse by time, 2 = reverse by name (default 1)
   """
-  @spec new_passcode_list_params(integer(), String.t() | nil, integer(), integer(), integer()) :: passcode_list_params()
-  def new_passcode_list_params(lock_id, search_str \\ nil, page_no \\ 1, page_size \\ 20, order_by \\ 1) do
+  @spec new_passcode_list_params(integer(), String.t() | nil, integer(), integer(), integer()) ::
+          passcode_list_params()
+  def new_passcode_list_params(
+        lock_id,
+        search_str \\ nil,
+        page_no \\ 1,
+        page_size \\ 20,
+        order_by \\ 1
+      ) do
     passcode_list_params(
       lock_id: lock_id,
       search_str: search_str,
@@ -382,8 +422,24 @@ defmodule TTlockClient.Types do
     * `end_date` - Optional new end time in milliseconds
     * `change_type` - Change method: 2 = Gateway/WiFi (default 2)
   """
-  @spec new_passcode_change_params(integer(), integer(), String.t() | nil, integer() | nil, integer() | nil, integer() | nil, integer()) :: passcode_change_params()
-  def new_passcode_change_params(lock_id, keyboard_pwd_id, keyboard_pwd_name \\ nil, new_keyboard_pwd \\ nil, start_date \\ nil, end_date \\ nil, change_type \\ 2) do
+  @spec new_passcode_change_params(
+          integer(),
+          integer(),
+          String.t() | nil,
+          integer() | nil,
+          integer() | nil,
+          integer() | nil,
+          integer()
+        ) :: passcode_change_params()
+  def new_passcode_change_params(
+        lock_id,
+        keyboard_pwd_id,
+        keyboard_pwd_name \\ nil,
+        new_keyboard_pwd \\ nil,
+        start_date \\ nil,
+        end_date \\ nil,
+        change_type \\ 2
+      ) do
     passcode_change_params(
       lock_id: lock_id,
       keyboard_pwd_id: keyboard_pwd_id,

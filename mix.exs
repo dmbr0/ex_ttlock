@@ -4,9 +4,9 @@ defmodule TTlockClient.MixProject do
   def project do
     [
       app: :ex_ttlock,
-      version: "0.1.3",
+      version: "2.1.0",
       elixir: "~> 1.18",
-      start_permanent: Mix.env() == :prod,
+      start_permanent: Mix.env() in [:dev, :prod],
       deps: deps(),
       name: "TTlockClient",
       description: "Elixir client library for TTLock Open Platform API",
@@ -56,7 +56,8 @@ defmodule TTlockClient.MixProject do
 
   defp package do
     [
-      description: "Elixir client library for TTLock Open Platform API with centralized OAuth management",
+      description:
+        "Elixir client library for TTLock Open Platform API with centralized OAuth management",
       licenses: ["MIT"],
       links: %{
         "GitHub" => "https://github.com/your_username/ex_ttlock",
@@ -76,9 +77,9 @@ defmodule TTlockClient.MixProject do
       ],
       groups_for_modules: [
         "Core API": [TTlockClient],
-        "Authentication": [TTlockClient.AuthManager, TTlockClient.OAuthClient],
-        "Types": [TTlockClient.Types],
-        "Application": [TTlockClient.Application]
+        Authentication: [TTlockClient.AuthManager, TTlockClient.OAuthClient],
+        Types: [TTlockClient.Types],
+        Application: [TTlockClient.Application]
       ]
     ]
   end

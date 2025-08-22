@@ -230,7 +230,12 @@ defmodule TTlockClient.Passcodes do
       end_time = DateTime.add(start_time, 30, :day)
       {:ok, result} = TTlockClient.Passcodes.change_passcode_period(12345, 67890, start_time, end_time)
   """
-  @spec change_passcode_period(integer(), integer(), DateTime.t() | integer(), DateTime.t() | integer()) :: passcode_api_result()
+  @spec change_passcode_period(
+          integer(),
+          integer(),
+          DateTime.t() | integer(),
+          DateTime.t() | integer()
+        ) :: passcode_api_result()
   def change_passcode_period(lock_id, passcode_id, start_date, end_date) do
     start_ms = datetime_to_milliseconds(start_date)
     end_ms = datetime_to_milliseconds(end_date)
@@ -252,7 +257,17 @@ defmodule TTlockClient.Passcodes do
   """
   @spec add_permanent_passcode(integer(), integer(), String.t() | nil) :: passcode_api_result()
   def add_permanent_passcode(lock_id, passcode, name \\ nil) do
-    params = new_passcode_add_params(lock_id, passcode, name, @passcode_type_permanent, nil, nil, @add_type_gateway)
+    params =
+      new_passcode_add_params(
+        lock_id,
+        passcode,
+        name,
+        @passcode_type_permanent,
+        nil,
+        nil,
+        @add_type_gateway
+      )
+
     add_passcode(params)
   end
 
@@ -273,12 +288,28 @@ defmodule TTlockClient.Passcodes do
         12345, 987654, start_time, end_time, "Week Access"
       )
   """
-  @spec add_temporary_passcode(integer(), integer(), DateTime.t() | integer(), DateTime.t() | integer(), String.t() | nil) :: passcode_api_result()
+  @spec add_temporary_passcode(
+          integer(),
+          integer(),
+          DateTime.t() | integer(),
+          DateTime.t() | integer(),
+          String.t() | nil
+        ) :: passcode_api_result()
   def add_temporary_passcode(lock_id, passcode, start_date, end_date, name \\ nil) do
     start_ms = datetime_to_milliseconds(start_date)
     end_ms = datetime_to_milliseconds(end_date)
 
-    params = new_passcode_add_params(lock_id, passcode, name, @passcode_type_period, start_ms, end_ms, @add_type_gateway)
+    params =
+      new_passcode_add_params(
+        lock_id,
+        passcode,
+        name,
+        @passcode_type_period,
+        start_ms,
+        end_ms,
+        @add_type_gateway
+      )
+
     add_passcode(params)
   end
 
@@ -373,7 +404,10 @@ defmodule TTlockClient.Passcodes do
     with {:ok, auth_data} <- get_auth_data(),
          {:ok, query_params} <- build_passcode_list_params(params, auth_data),
          {:ok, response} <- make_get_request(@passcode_list_endpoint, query_params) do
-      Logger.info("Successfully retrieved passcode list for lock ID: #{lock_id} - Total: #{Map.get(response, "total", 0)}")
+      Logger.info(
+        "Successfully retrieved passcode list for lock ID: #{lock_id} - Total: #{Map.get(response, "total", 0)}"
+      )
+
       {:ok, parse_passcode_list_response(response)}
     end
   end
@@ -496,17 +530,24 @@ defmodule TTlockClient.Passcodes do
       not is_integer(keyboard_pwd_id) or keyboard_pwd_id <= 0 ->
         {:error, {:validation_error, "keyboard_pwd_id must be a positive integer"}}
 
-      new_keyboard_pwd != nil and (not is_integer(new_keyboard_pwd) or new_keyboard_pwd < 1000 or new_keyboard_pwd > 999_999_999) ->
+      new_keyboard_pwd != nil and
+          (not is_integer(new_keyboard_pwd) or new_keyboard_pwd < 1000 or
+             new_keyboard_pwd > 999_999_999) ->
         {:error, {:validation_error, "new_keyboard_pwd must be 4-9 digits"}}
 
       (start_date != nil and end_date == nil) or (start_date == nil and end_date != nil) ->
-        {:error, {:validation_error, "start_date and end_date must both be provided when changing validity period"}}
+        {:error,
+         {:validation_error,
+          "start_date and end_date must both be provided when changing validity period"}}
 
       start_date != nil and end_date != nil and start_date >= end_date ->
         {:error, {:validation_error, "start_date must be before end_date"}}
 
-      keyboard_pwd_name == nil and new_keyboard_pwd == nil and start_date == nil and end_date == nil ->
-        {:error, {:validation_error, "at least one change parameter must be provided (name, passcode, or dates)"}}
+      keyboard_pwd_name == nil and new_keyboard_pwd == nil and start_date == nil and
+          end_date == nil ->
+        {:error,
+         {:validation_error,
+          "at least one change parameter must be provided (name, passcode, or dates)"}}
 
       true ->
         :ok
@@ -547,12 +588,16 @@ defmodule TTlockClient.Passcodes do
     end
   end
 
-  @spec get_client_config() :: {:ok, TTlockClient.Types.client_config()} | {:error, :not_configured}
+  @spec get_client_config() ::
+          {:ok, TTlockClient.Types.client_config()} | {:error, :not_configured}
   defp get_client_config do
     AuthManager.get_config()
   end
 
-  @spec build_passcode_add_params(TTlockClient.Types.passcode_add_params(), {String.t(), String.t()}) :: {:ok, map()}
+  @spec build_passcode_add_params(
+          TTlockClient.Types.passcode_add_params(),
+          {String.t(), String.t()}
+        ) :: {:ok, map()}
   defp build_passcode_add_params(params, {access_token, client_id}) do
     base_params = %{
       "clientId" => client_id,
@@ -575,7 +620,10 @@ defmodule TTlockClient.Passcodes do
     {:ok, form_params}
   end
 
-  @spec build_passcode_change_params(TTlockClient.Types.passcode_change_params(), {String.t(), String.t()}) :: {:ok, map()}
+  @spec build_passcode_change_params(
+          TTlockClient.Types.passcode_change_params(),
+          {String.t(), String.t()}
+        ) :: {:ok, map()}
   defp build_passcode_change_params(params, {access_token, client_id}) do
     base_params = %{
       "clientId" => client_id,
@@ -598,21 +646,28 @@ defmodule TTlockClient.Passcodes do
     {:ok, form_params}
   end
 
-  @spec build_passcode_delete_params(TTlockClient.Types.passcode_delete_params(), {String.t(), String.t()}) :: {:ok, map()}
+  @spec build_passcode_delete_params(
+          TTlockClient.Types.passcode_delete_params(),
+          {String.t(), String.t()}
+        ) :: {:ok, map()}
   defp build_passcode_delete_params(params, {access_token, client_id}) do
     form_params = %{
       "clientId" => client_id,
       "accessToken" => access_token,
       "lockId" => passcode_delete_params(params, :lock_id),
       "keyboardPwdId" => passcode_delete_params(params, :keyboard_pwd_id),
-      "deleteType" => 2,  # Always use gateway deletion
+      # Always use gateway deletion
+      "deleteType" => 2,
       "date" => current_timestamp_ms()
     }
 
     {:ok, form_params}
   end
 
-  @spec build_passcode_list_params(TTlockClient.Types.passcode_list_params(), {String.t(), String.t()}) :: {:ok, map()}
+  @spec build_passcode_list_params(
+          TTlockClient.Types.passcode_list_params(),
+          {String.t(), String.t()}
+        ) :: {:ok, map()}
   defp build_passcode_list_params(params, {access_token, client_id}) do
     base_params = %{
       "clientId" => client_id,
@@ -689,7 +744,10 @@ defmodule TTlockClient.Passcodes do
             parse_response(response_body)
 
           {:ok, %Finch.Response{status: status, body: response_body}} ->
-            Logger.warning("Passcode GET API request failed with status #{status}: #{response_body}")
+            Logger.warning(
+              "Passcode GET API request failed with status #{status}: #{response_body}"
+            )
+
             parse_error_response(response_body)
 
           {:error, %Mint.TransportError{reason: reason}} ->
@@ -735,6 +793,7 @@ defmodule TTlockClient.Passcodes do
           error_code: error_code,
           description: description
         }
+
         {:error, error}
 
       {:ok, %{"error" => error_type}} ->

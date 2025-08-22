@@ -46,6 +46,7 @@ defmodule TTlockClient do
   alias TTlockClient.AuthManager
   alias TTlockClient.Locks
   alias TTlockClient.Passcodes
+  alias TTlockClient.Gateways
 
   @doc """
   Configures the TTLock client with your application credentials.
@@ -222,7 +223,8 @@ defmodule TTlockClient do
     * `:ok` - Configuration and authentication successful
     * `{:error, reason}` - Setup failed
   """
-  @spec start(String.t(), String.t(), String.t(), String.t(), String.t()) :: :ok | {:error, term()}
+  @spec start(String.t(), String.t(), String.t(), String.t(), String.t()) ::
+          :ok | {:error, term()}
   def start(client_id, client_secret, username, password, base_url \\ "https://euapi.ttlock.com") do
     with :ok <- configure(client_id, client_secret, base_url),
          :ok <- authenticate(username, password) do
@@ -307,7 +309,7 @@ defmodule TTlockClient do
     * `{:error, reason}` - Request failed
   """
   @spec get_locks(integer(), integer(), String.t() | nil, integer() | nil) ::
-    {:ok, map()} | {:error, term()}
+          {:ok, map()} | {:error, term()}
   def get_locks(page_no \\ 1, page_size \\ 20, lock_alias \\ nil, group_id \\ nil) do
     params = TTlockClient.Types.new_lock_list_params(page_no, page_size, lock_alias, group_id)
     Locks.get_lock_list(params)
@@ -369,7 +371,7 @@ defmodule TTlockClient do
     * `{:error, reason}` - Request failed
   """
   @spec add_permanent_passcode(integer(), integer(), String.t() | nil) ::
-    {:ok, map()} | {:error, term()}
+          {:ok, map()} | {:error, term()}
   def add_permanent_passcode(lock_id, passcode, name \\ nil) do
     Passcodes.add_permanent_passcode(lock_id, passcode, name)
   end
@@ -393,8 +395,14 @@ defmodule TTlockClient do
     * `{:ok, response}` - Contains keyboardPwdId
     * `{:error, reason}` - Request failed
   """
-  @spec add_temporary_passcode(integer(), integer(), DateTime.t() | integer(), DateTime.t() | integer(), String.t() | nil) ::
-    {:ok, map()} | {:error, term()}
+  @spec add_temporary_passcode(
+          integer(),
+          integer(),
+          DateTime.t() | integer(),
+          DateTime.t() | integer(),
+          String.t() | nil
+        ) ::
+          {:ok, map()} | {:error, term()}
   def add_temporary_passcode(lock_id, passcode, start_date, end_date, name \\ nil) do
     Passcodes.add_temporary_passcode(lock_id, passcode, start_date, end_date, name)
   end
@@ -420,10 +428,36 @@ defmodule TTlockClient do
     * `{:ok, response}` - Contains keyboardPwdId
     * `{:error, reason}` - Request failed
   """
-  @spec add_passcode(integer(), integer(), String.t() | nil, integer(), integer() | nil, integer() | nil, integer()) ::
-    {:ok, map()} | {:error, term()}
-  def add_passcode(lock_id, passcode, name \\ nil, passcode_type \\ 3, start_date \\ nil, end_date \\ nil, add_type \\ 2) do
-    params = TTlockClient.Types.new_passcode_add_params(lock_id, passcode, name, passcode_type, start_date, end_date, add_type)
+  @spec add_passcode(
+          integer(),
+          integer(),
+          String.t() | nil,
+          integer(),
+          integer() | nil,
+          integer() | nil,
+          integer()
+        ) ::
+          {:ok, map()} | {:error, term()}
+  def add_passcode(
+        lock_id,
+        passcode,
+        name \\ nil,
+        passcode_type \\ 3,
+        start_date \\ nil,
+        end_date \\ nil,
+        add_type \\ 2
+      ) do
+    params =
+      TTlockClient.Types.new_passcode_add_params(
+        lock_id,
+        passcode,
+        name,
+        passcode_type,
+        start_date,
+        end_date,
+        add_type
+      )
+
     Passcodes.add_passcode(params)
   end
 
@@ -460,14 +494,37 @@ defmodule TTlockClient do
     * `{:ok, response}` - Success with status information
     * `{:error, reason}` - Request failed
   """
-  @spec change_passcode(integer(), integer(), String.t() | nil, integer() | nil, DateTime.t() | integer() | nil, DateTime.t() | integer() | nil) ::
-    {:ok, map()} | {:error, term()}
-  def change_passcode(lock_id, passcode_id, new_name \\ nil, new_passcode \\ nil, start_date \\ nil, end_date \\ nil) do
+  @spec change_passcode(
+          integer(),
+          integer(),
+          String.t() | nil,
+          integer() | nil,
+          DateTime.t() | integer() | nil,
+          DateTime.t() | integer() | nil
+        ) ::
+          {:ok, map()} | {:error, term()}
+  def change_passcode(
+        lock_id,
+        passcode_id,
+        new_name \\ nil,
+        new_passcode \\ nil,
+        start_date \\ nil,
+        end_date \\ nil
+      ) do
     # Convert DateTime to milliseconds if needed
     start_ms = if start_date, do: datetime_to_milliseconds(start_date), else: nil
     end_ms = if end_date, do: datetime_to_milliseconds(end_date), else: nil
 
-    params = TTlockClient.Types.new_passcode_change_params(lock_id, passcode_id, new_name, new_passcode, start_ms, end_ms)
+    params =
+      TTlockClient.Types.new_passcode_change_params(
+        lock_id,
+        passcode_id,
+        new_name,
+        new_passcode,
+        start_ms,
+        end_ms
+      )
+
     Passcodes.change_passcode(params)
   end
 
@@ -529,8 +586,13 @@ defmodule TTlockClient do
     * `{:ok, response}` - Success with status information
     * `{:error, reason}` - Request failed
   """
-  @spec change_passcode_period(integer(), integer(), DateTime.t() | integer(), DateTime.t() | integer()) ::
-    {:ok, map()} | {:error, term()}
+  @spec change_passcode_period(
+          integer(),
+          integer(),
+          DateTime.t() | integer(),
+          DateTime.t() | integer()
+        ) ::
+          {:ok, map()} | {:error, term()}
   def change_passcode_period(lock_id, passcode_id, start_date, end_date) do
     Passcodes.change_passcode_period(lock_id, passcode_id, start_date, end_date)
   end
@@ -604,9 +666,17 @@ defmodule TTlockClient do
     * `{:error, reason}` - Request failed
   """
   @spec get_passcodes(integer(), String.t() | nil, integer(), integer(), integer()) ::
-    {:ok, map()} | {:error, term()}
+          {:ok, map()} | {:error, term()}
   def get_passcodes(lock_id, search_str \\ nil, page_no \\ 1, page_size \\ 20, order_by \\ 1) do
-    params = TTlockClient.Types.new_passcode_list_params(lock_id, search_str, page_no, page_size, order_by)
+    params =
+      TTlockClient.Types.new_passcode_list_params(
+        lock_id,
+        search_str,
+        page_no,
+        page_size,
+        order_by
+      )
+
     Passcodes.get_passcode_list(params)
   end
 
@@ -648,6 +718,47 @@ defmodule TTlockClient do
   @spec search_passcodes(integer(), String.t()) :: {:ok, map()} | {:error, term()}
   def search_passcodes(lock_id, search_term) do
     Passcodes.search_passcodes(lock_id, search_term)
+  end
+
+  # Gateway Management Functions
+
+  @doc """
+  Gets the list of gateways for the authenticated user account.
+
+  ## Parameters
+    * `page_no` - Page number (starting from 1, default 1)
+    * `page_size` - Number of items per page (max 200, default 20)
+    * `order_by` - Sort order: 0 = by name, 1 = reverse by time, 2 = reverse by name (default 1)
+
+  ## Examples
+      {:ok, response} = TTlockClient.get_gateways()
+      {:ok, response} = TTlockClient.get_gateways(2, 50, 0)
+
+  ## Returns
+    * `{:ok, response}` - List of gateways with pagination info
+    * `{:error, reason}` - Request failed
+  """
+  @spec get_gateways(integer(), integer(), integer()) :: {:ok, map()} | {:error, term()}
+  def get_gateways(page_no \\ 1, page_size \\ 20, order_by \\ 1) do
+    Gateways.list(page_no, page_size, order_by)
+  end
+
+  @doc """
+  Gets the list of locks for a specified gateway.
+
+  ## Parameters
+    * `gateway_id` - Gateway ID
+
+  ## Examples
+      {:ok, locks} = TTlockClient.get_gateway_locks(12345)
+
+  ## Returns
+    * `{:ok, %{list: [lock_info]}}` - List of locks with their information
+    * `{:error, reason}` - Request failed
+  """
+  @spec get_gateway_locks(integer()) :: {:ok, map()} | {:error, term()}
+  def get_gateway_locks(gateway_id) do
+    Gateways.list_locks(gateway_id)
   end
 
   # Private helper functions

@@ -64,12 +64,17 @@ defmodule TTlockClient.Locks do
   def get_lock_list(params \\ nil) do
     params = params || new_lock_list_params()
 
-    Logger.debug("Fetching lock list - Page: #{lock_list_params(params, :page_no)}, Size: #{lock_list_params(params, :page_size)}")
+    Logger.debug(
+      "Fetching lock list - Page: #{lock_list_params(params, :page_no)}, Size: #{lock_list_params(params, :page_size)}"
+    )
 
     with {:ok, auth_data} <- get_auth_data(),
          {:ok, query_params} <- build_lock_list_params(params, auth_data),
          {:ok, response} <- make_api_request(@lock_list_endpoint, query_params) do
-      Logger.info("Successfully retrieved lock list - Total locks: #{Map.get(response, "total", 0)}")
+      Logger.info(
+        "Successfully retrieved lock list - Total locks: #{Map.get(response, "total", 0)}"
+      )
+
       {:ok, parse_lock_list_response(response)}
     end
   end
@@ -137,7 +142,8 @@ defmodule TTlockClient.Locks do
       {:ok, all_locks} = TTlockClient.Locks.get_all_locks()
       {:ok, filtered_locks} = TTlockClient.Locks.get_all_locks(50, "Front", 123)
   """
-  @spec get_all_locks(integer(), String.t() | nil, integer() | nil) :: {:ok, [map()]} | {:error, term()}
+  @spec get_all_locks(integer(), String.t() | nil, integer() | nil) ::
+          {:ok, [map()]} | {:error, term()}
   def get_all_locks(page_size \\ 100, lock_alias \\ nil, group_id \\ nil) do
     get_all_locks_recursive([], 1, page_size, lock_alias, group_id)
   end
@@ -161,12 +167,14 @@ defmodule TTlockClient.Locks do
     end
   end
 
-  @spec get_client_config() :: {:ok, TTlockClient.Types.client_config()} | {:error, :not_configured}
+  @spec get_client_config() ::
+          {:ok, TTlockClient.Types.client_config()} | {:error, :not_configured}
   defp get_client_config do
     AuthManager.get_config()
   end
 
-  @spec build_lock_list_params(TTlockClient.Types.lock_list_params(), {String.t(), String.t()}) :: {:ok, map()}
+  @spec build_lock_list_params(TTlockClient.Types.lock_list_params(), {String.t(), String.t()}) ::
+          {:ok, map()}
   defp build_lock_list_params(params, {access_token, client_id}) do
     base_params = %{
       "clientId" => client_id,
@@ -186,7 +194,10 @@ defmodule TTlockClient.Locks do
     {:ok, query_params}
   end
 
-  @spec build_lock_detail_params(TTlockClient.Types.lock_detail_params(), {String.t(), String.t()}) :: {:ok, map()}
+  @spec build_lock_detail_params(
+          TTlockClient.Types.lock_detail_params(),
+          {String.t(), String.t()}
+        ) :: {:ok, map()}
   defp build_lock_detail_params(params, {access_token, client_id}) do
     query_params = %{
       "clientId" => client_id,
@@ -261,6 +272,7 @@ defmodule TTlockClient.Locks do
           error_code: error_code,
           description: description
         }
+
         {:error, error}
 
       {:ok, %{"error" => error_type}} ->
@@ -299,7 +311,7 @@ defmodule TTlockClient.Locks do
   end
 
   @spec get_all_locks_recursive([map()], integer(), integer(), String.t() | nil, integer() | nil) ::
-    {:ok, [map()]} | {:error, term()}
+          {:ok, [map()]} | {:error, term()}
   defp get_all_locks_recursive(acc_locks, page_no, page_size, lock_alias, group_id) do
     params = new_lock_list_params(page_no, page_size, lock_alias, group_id)
 

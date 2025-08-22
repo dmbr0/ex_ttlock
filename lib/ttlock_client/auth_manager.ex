@@ -275,7 +275,9 @@ defmodule TTlockClient.AuthManager do
     {:error, :not_authenticated}
   end
 
-  defp perform_refresh(%State{config: config, token_info: token_info, refresh_timer: timer} = state) do
+  defp perform_refresh(
+         %State{config: config, token_info: token_info, refresh_timer: timer} = state
+       ) do
     token_info(refresh_token: refresh_token) = token_info
 
     case OAuthClient.refresh_access_token(config, refresh_token) do

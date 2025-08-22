@@ -34,7 +34,8 @@ defmodule TTlockClient.OAuthClient do
       iex> TTlockClient.OAuthClient.get_access_token(config, "username", "password")
       {:ok, %{access_token: "...", refresh_token: "...", expires_in: 7776000, uid: 1234}}
   """
-  @spec get_access_token(TTlockClient.Types.client_config(), String.t(), String.t()) :: auth_result()
+  @spec get_access_token(TTlockClient.Types.client_config(), String.t(), String.t()) ::
+          auth_result()
   def get_access_token(
         client_config(client_id: client_id, client_secret: client_secret, base_url: base_url),
         username,
